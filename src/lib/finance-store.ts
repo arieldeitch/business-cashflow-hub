@@ -216,6 +216,7 @@ let state: StoreData = loadState() ?? {
 const listeners = new Set<() => void>();
 
 const emit = () => {
+  cachedSnapshot = null;
   saveState(state);
   listeners.forEach((l) => l());
 };
@@ -397,8 +398,35 @@ export const financeStore = {
   },
 };
 
-export function useFinance() {
-  return useSyncExternalStore(financeStore.subscribe, financeStore.get, financeStore.get);
+// ─── Dynamic balance ─────────────────────────────────────────────────────────
+
+export function computeCurrentBalance(data: StoreData): number {
+  let b = data.balance; // user-set starting balance
+  for (const t of data.transactions) {
+    if (t.status === "paid") {
+      b += t.type === "income" ? t.amount : -t.amount;
+    }
+  }
+  return b;
+}
+
+export type FinanceState = StoreData & { startingBalance: number };
+
+let cachedSnapshot: FinanceState | null = null;
+
+function getSnapshot(): FinanceState {
+  if (cachedSnapshot === null) {
+    cachedSnapshot = {
+      ...state,
+      startingBalance: state.balance,
+      balance: computeCurrentBalance(state),
+    };
+  }
+  return cachedSnapshot;
+}
+
+export function useFinance(): FinanceState {
+  return useSyncExternalStore(financeStore.subscribe, getSnapshot, getSnapshot);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

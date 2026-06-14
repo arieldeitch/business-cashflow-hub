@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { balance, transactions, authorityObligations } = useFinance();
+  const { balance, startingBalance, transactions, authorityObligations } = useFinance();
   const [hidden, setHidden] = useState(false);
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState("");
@@ -220,7 +220,7 @@ function Dashboard() {
             </p>
             <button
               onClick={() => {
-                setBalanceDraft(String(balance));
+                setBalanceDraft(String(startingBalance));
                 setEditingBalance(true);
               }}
               className="mt-2 flex items-center gap-1 text-xs opacity-60 transition hover:opacity-90 active:scale-[0.98]"
