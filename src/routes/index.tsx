@@ -94,6 +94,13 @@ function Dashboard() {
   }, [projected, collectionsSummary, upcomingObligations]);
 
   const createVatObligation = () => {
+    const existingVat = financeStore.get().authorityObligations.find(
+      (o) => o.authority === "vat" && o.status === "pending"
+    );
+    if (existingVat) {
+      navigate({ to: "/authorities" });
+      return;
+    }
     const d = new Date();
     d.setDate(d.getDate() + 14);
     const dueDate = d.toISOString().slice(0, 10);
@@ -300,7 +307,7 @@ function Dashboard() {
       {/* Collections card */}
       <section className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">הכנסות צפויות</h2>
+          <h2 className="font-display text-lg font-semibold">גבייה פתוחה</h2>
           <Link to="/collections" className="text-xs font-medium text-primary">
             לגבייה
           </Link>
