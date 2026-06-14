@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, ChevronLeft } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/add")({
-  head: () => ({ meta: [{ title: "New Entry — Cashflow OS" }] }),
+  head: () => ({ meta: [{ title: "רשומה חדשה — Cashflow OS" }] }),
   component: AddPicker,
 });
 
@@ -12,11 +12,11 @@ function AddPicker() {
       <div className="mx-auto flex min-h-screen max-w-[480px] flex-col px-5 pt-8">
         <header className="flex items-center gap-3">
           <Link to="/" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface">
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronRight className="h-5 w-5" />
           </Link>
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">New</p>
-            <h1 className="font-display text-2xl font-semibold">What's this?</h1>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">חדש</p>
+            <h1 className="font-display text-2xl font-semibold">מה נרשום?</h1>
           </div>
         </header>
 
@@ -29,8 +29,8 @@ function AddPicker() {
               <ArrowDownLeft className="h-6 w-6" strokeWidth={2.4} />
             </span>
             <div>
-              <p className="font-display text-lg font-semibold">Income</p>
-              <p className="text-xs text-muted-foreground">Money coming in from a customer</p>
+              <p className="font-display text-lg font-semibold">הכנסה</p>
+              <p className="text-xs text-muted-foreground">כסף שמגיע מלקוח</p>
             </div>
           </Link>
 
@@ -42,8 +42,8 @@ function AddPicker() {
               <ArrowUpRight className="h-6 w-6" strokeWidth={2.4} />
             </span>
             <div>
-              <p className="font-display text-lg font-semibold">Expense</p>
-              <p className="text-xs text-muted-foreground">A bill or cost going out</p>
+              <p className="font-display text-lg font-semibold">הוצאה</p>
+              <p className="text-xs text-muted-foreground">חשבון או עלות</p>
             </div>
           </Link>
         </div>

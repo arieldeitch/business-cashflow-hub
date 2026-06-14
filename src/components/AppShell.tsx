@@ -39,9 +39,9 @@ export function AppShell({ children, title, subtitle, header }: Props) {
 }
 
 const tabs: { to: LinkProps["to"]; label: string; icon: typeof Home }[] = [
-  { to: "/", label: "Home", icon: Home },
-  { to: "/transactions", label: "Activity", icon: ListChecks },
-  { to: "/forecast", label: "Forecast", icon: TrendingUp },
+  { to: "/", label: "בית", icon: Home },
+  { to: "/transactions", label: "פעילות", icon: ListChecks },
+  { to: "/forecast", label: "תחזית", icon: TrendingUp },
 ];
 
 function BottomNav() {
@@ -56,12 +56,12 @@ function BottomNav() {
         <Link
           to="/add"
           className="-mt-8 grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.82_0.16_162/0.5)] transition active:scale-95"
-          aria-label="Add"
+          aria-label="הוסף"
         >
           <Plus className="h-6 w-6" strokeWidth={2.5} />
         </Link>
         <TabItem {...tabs[2]} active={pathname === tabs[2].to} />
-        <TabItem to="/transactions" label="More" icon={ListChecks} hidden active={false} />
+        <TabItem to="/transactions" label="פעילות" icon={ListChecks} hidden active={false} />
       </div>
     </nav>
   );
