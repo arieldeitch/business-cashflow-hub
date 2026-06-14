@@ -1,29 +1,224 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { useFinance, fmt, withinDays } from "@/lib/finance-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Business Cashflow OS" },
+      { name: "description", content: "See your cash position, expected income and expenses, and 30-day forecast." },
     ],
   }),
-  component: Index,
+  component: Dashboard,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Dashboard() {
+  const { balance, transactions } = useFinance();
+  const [hidden, setHidden] = useState(false);
+
+  const { expectedIncome, expectedExpenses, overdueCount, overdueAmount } = useMemo(() => {
+    let inc = 0, exp = 0, oCount = 0, oAmt = 0;
+    for (const t of transactions) {
+      if (t.status === "overdue") {
+        oCount++;
+        oAmt += t.amount;
+      }
+      if (t.status === "pending" && withinDays(t.date, 30)) {
+        if (t.type === "income") inc += t.amount;
+        else exp += t.amount;
+      }
+    }
+    return { expectedIncome: inc, expectedExpenses: exp, overdueCount: oCount, overdueAmount: oAmt };
+  }, [transactions]);
+
+  const net = expectedIncome - expectedExpenses;
+  const projected = balance + net;
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
+    <AppShell
+      header={
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Good morning, Maya
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold">Cashflow OS</h1>
+          </div>
+          <button className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-muted-foreground">
+            <Bell className="h-4 w-4" />
+          </button>
+        </div>
+      }
     >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+      {/* Balance hero */}
+      <section
+        className="relative overflow-hidden rounded-3xl p-6 text-primary-foreground"
+        style={{ background: "var(--gradient-balance)" }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">
+            Current Balance
+          </span>
+          <button
+            onClick={() => setHidden((v) => !v)}
+            className="grid h-8 w-8 place-items-center rounded-full bg-black/15"
+            aria-label="Toggle balance visibility"
+          >
+            {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <p className="mt-3 font-display text-4xl font-bold tabular">
+          {hidden ? "••••••" : fmt(balance)}
+        </p>
+        <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+          <div className="rounded-2xl bg-black/15 p-3">
+            <p className="opacity-80">Projected (30d)</p>
+            <p className="mt-1 font-display text-lg font-semibold tabular">
+              {hidden ? "••••" : fmt(projected)}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-black/15 p-3">
+            <p className="opacity-80">Net Forecast</p>
+            <p className={`mt-1 font-display text-lg font-semibold tabular ${net >= 0 ? "" : "text-destructive-foreground"}`}>
+              {net >= 0 ? "+" : "−"}{hidden ? "••••" : fmt(Math.abs(net))}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick actions */}
+      <section className="mt-5 grid grid-cols-2 gap-3">
+        <Link
+          to="/income"
+          className="group flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 transition active:scale-[0.98]"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-success/15 text-success">
+            <ArrowDownLeft className="h-5 w-5" strokeWidth={2.4} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Add Income</p>
+            <p className="text-xs text-muted-foreground">Expected payment</p>
+          </div>
+        </Link>
+        <Link
+          to="/expense"
+          className="group flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 transition active:scale-[0.98]"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/15 text-destructive">
+            <ArrowUpRight className="h-5 w-5" strokeWidth={2.4} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Add Expense</p>
+            <p className="text-xs text-muted-foreground">New bill or cost</p>
+          </div>
+        </Link>
+      </section>
+
+      {/* 30 day cards */}
+      <section className="mt-5 grid grid-cols-2 gap-3">
+        <StatCard
+          label="Expected Income"
+          sub="Next 30 days"
+          amount={expectedIncome}
+          tone="success"
+        />
+        <StatCard
+          label="Expected Expenses"
+          sub="Next 30 days"
+          amount={expectedExpenses}
+          tone="destructive"
+        />
+      </section>
+
+      {/* Overdue alert */}
+      {overdueCount > 0 && (
+        <Link
+          to="/transactions"
+          search={{ filter: "overdue" }}
+          className="mt-5 flex items-center gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-warning/20 text-warning">
+            <AlertTriangle className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              {overdueCount} overdue {overdueCount === 1 ? "payment" : "payments"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {fmt(overdueAmount)} needs your attention
+            </p>
+          </div>
+          <span className="text-xs font-medium text-warning">Review →</span>
+        </Link>
+      )}
+
+      {/* Upcoming */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">Upcoming</h2>
+          <Link to="/transactions" className="text-xs font-medium text-primary">
+            See all
+          </Link>
+        </div>
+        <ul className="mt-3 space-y-2">
+          {transactions
+            .filter((t) => t.status !== "paid")
+            .sort((a, b) => +new Date(a.date) - +new Date(b.date))
+            .slice(0, 4)
+            .map((t) => (
+              <li
+                key={t.id}
+                className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
+              >
+                <span
+                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                    t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                  }`}
+                >
+                  {t.type === "income" ? (
+                    <ArrowDownLeft className="h-5 w-5" />
+                  ) : (
+                    <ArrowUpRight className="h-5 w-5" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{t.party}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {t.status === "overdue" && <span className="ml-1 text-warning">· overdue</span>}
+                  </p>
+                </div>
+                <p className={`font-display text-sm font-semibold tabular ${t.type === "income" ? "text-success" : "text-foreground"}`}>
+                  {t.type === "income" ? "+" : "−"}{fmt(t.amount)}
+                </p>
+              </li>
+            ))}
+        </ul>
+      </section>
+    </AppShell>
+  );
+}
+
+function StatCard({
+  label,
+  sub,
+  amount,
+  tone,
+}: {
+  label: string;
+  sub: string;
+  amount: number;
+  tone: "success" | "destructive";
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-2 font-display text-xl font-semibold tabular">{fmt(amount)}</p>
+      <p className={`mt-1 text-[11px] font-medium ${tone === "success" ? "text-success" : "text-destructive"}`}>
+        {sub}
+      </p>
     </div>
   );
 }
