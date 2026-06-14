@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell, Building2, Banknote } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -56,6 +56,43 @@ function Dashboard() {
   const net = expectedIncome - expectedExpenses;
   const projected = balance + net;
 
+  const healthInsights = useMemo(() => {
+    type Tone = "success" | "warning" | "destructive";
+    const items: { key: string; tone: Tone; text: string }[] = [];
+
+    // 1. Forecast health — always shown
+    if (projected > 0) {
+      items.push({ key: "forecast", tone: "success", text: "התזרים החזוי חיובי ב-30 הימים הקרובים" });
+    } else {
+      items.push({ key: "forecast", tone: "destructive", text: "צפוי מחסור בתזרים" });
+    }
+
+    // 2. Overdue receivables
+    if (collectionsSummary.totalOverdueReceivables > 0) {
+      items.push({ key: "collections", tone: "warning", text: `${fmt(collectionsSummary.totalOverdueReceivables)} בגבייה באיחור` });
+    }
+
+    // 3. Nearest pending authority obligation
+    if (upcomingObligations.length > 0) {
+      const nearest = upcomingObligations[0];
+      const days = daysUntil(nearest.dueDate);
+      items.push({ key: "authority", tone: "warning", text: `תשלום ${AUTHORITY_LABELS[nearest.authority]} ${labelDaysUntil(days)}` });
+    }
+
+    // 4. Cash in risk
+    if (collectionsSummary.cashInRisk > 5000) {
+      items.push({ key: "cash-risk", tone: "warning", text: "נדרש מעקב אחר גבייה השבוע" });
+    }
+
+    // 5. All-clear: no warnings and forecast positive
+    const hasWarnings = items.some((i) => i.tone === "warning");
+    if (!hasWarnings && projected > 0) {
+      items.push({ key: "all-clear", tone: "success", text: "אין סיכון תזרימי מיידי" });
+    }
+
+    return items;
+  }, [projected, collectionsSummary, upcomingObligations]);
+
   const createVatObligation = () => {
     const d = new Date();
     d.setDate(d.getDate() + 14);
@@ -85,6 +122,35 @@ function Dashboard() {
         </div>
       }
     >
+      {/* Financial Health Card */}
+      <section className="mb-5 rounded-3xl border border-border bg-surface p-5">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          בריאות פיננסית
+        </p>
+        <ul className="space-y-2.5">
+          {healthInsights.map((ins) => {
+            const Icon =
+              ins.tone === "success"
+                ? CheckCircle2
+                : ins.tone === "destructive"
+                  ? AlertCircle
+                  : AlertTriangle;
+            const color =
+              ins.tone === "success"
+                ? "text-success"
+                : ins.tone === "destructive"
+                  ? "text-destructive"
+                  : "text-warning";
+            return (
+              <li key={ins.key} className="flex items-center gap-2.5">
+                <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+                <span className="text-sm font-medium leading-snug">{ins.text}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
       {/* Balance hero */}
       <section
         className="relative overflow-hidden rounded-3xl p-6 text-primary-foreground"
