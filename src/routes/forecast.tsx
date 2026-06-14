@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useFinance, fmt, localISO, getRecurringInWindow } from "@/lib/finance-store";
-import { TrendingUp, TrendingDown, Repeat } from "lucide-react";
+import { TrendingUp, TrendingDown, Repeat, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/forecast")({
   head: () => ({ meta: [{ title: "תחזית — Cashflow OS" }] }),
@@ -16,16 +16,30 @@ function fmtShortDate(d: Date): string {
 }
 
 function Forecast() {
-  const { balance, transactions, recurringExpenses } = useFinance();
+  const { balance, transactions, recurringExpenses, authorityObligations } = useFinance();
 
   const { days, totalIn, totalOut, finalBalance, minBalance, maxBalance } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Pre-compute recurring occurrences for the 30-day window
     const recurringByDate = getRecurringInWindow(recurringExpenses, 30);
 
-    const dayList: { date: Date; balance: number; in: number; out: number; recurring: number }[] = [];
+    // Build authority obligations map: date → total amount
+    const authorityByDate = new Map<string, number>();
+    for (const o of authorityObligations) {
+      if (o.status === "pending") {
+        authorityByDate.set(o.dueDate, (authorityByDate.get(o.dueDate) ?? 0) + o.amount);
+      }
+    }
+
+    const dayList: {
+      date: Date;
+      balance: number;
+      in: number;
+      out: number;
+      recurring: number;
+      authority: number;
+    }[] = [];
     let running = balance;
     let totalIn = 0;
     let totalOut = 0;
@@ -45,12 +59,13 @@ function Forecast() {
       }
 
       const recurringOut = recurringByDate.get(dateKey) ?? 0;
-      outToday += recurringOut;
+      const authorityOut = authorityByDate.get(dateKey) ?? 0;
+      outToday += recurringOut + authorityOut;
 
       running += inToday - outToday;
       totalIn += inToday;
       totalOut += outToday;
-      dayList.push({ date: d, balance: running, in: inToday, out: outToday, recurring: recurringOut });
+      dayList.push({ date: d, balance: running, in: inToday, out: outToday, recurring: recurringOut, authority: authorityOut });
     }
 
     const balances = dayList.map((d) => d.balance);
@@ -62,7 +77,7 @@ function Forecast() {
       minBalance: Math.min(...balances, balance),
       maxBalance: Math.max(...balances, balance),
     };
-  }, [balance, transactions, recurringExpenses]);
+  }, [balance, transactions, recurringExpenses, authorityObligations]);
 
   const net = totalIn - totalOut;
 
@@ -140,13 +155,22 @@ function Forecast() {
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">תזרים יומי</h2>
-          <Link
-            to="/recurring"
-            className="flex items-center gap-1 text-xs font-medium text-primary"
-          >
-            <Repeat className="h-3 w-3" />
-            ניהול קבועות
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/authorities"
+              className="flex items-center gap-1 text-xs font-medium text-muted-foreground"
+            >
+              <Building2 className="h-3 w-3" />
+              רשויות
+            </Link>
+            <Link
+              to="/recurring"
+              className="flex items-center gap-1 text-xs font-medium text-primary"
+            >
+              <Repeat className="h-3 w-3" />
+              קבועות
+            </Link>
+          </div>
         </div>
         {daysWithFlow.length === 0 ? (
           <p className="rounded-2xl border border-border bg-surface p-6 text-center text-sm text-muted-foreground">
@@ -166,6 +190,12 @@ function Forecast() {
                       <span className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
                         <Repeat className="h-2.5 w-2.5" />
                         קבועה
+                      </span>
+                    )}
+                    {d.authority > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-medium text-warning">
+                        <Building2 className="h-2.5 w-2.5" />
+                        רשות
                       </span>
                     )}
                   </div>

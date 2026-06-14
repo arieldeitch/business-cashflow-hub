@@ -1,8 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell, Building2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { useFinance, fmt, fmtDate, withinDays, getVatSummary, financeStore } from "@/lib/finance-store";
+import {
+  useFinance,
+  fmt,
+  fmtDate,
+  withinDays,
+  getVatSummary,
+  getUpcomingAuthorityObligations,
+  labelDaysUntil,
+  daysUntil,
+  financeStore,
+  AUTHORITY_LABELS,
+} from "@/lib/finance-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -15,8 +26,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { balance, transactions } = useFinance();
+  const { balance, transactions, authorityObligations } = useFinance();
   const [hidden, setHidden] = useState(false);
+  const navigate = useNavigate();
 
   const { expectedIncome, expectedExpenses, overdueCount, overdueAmount } = useMemo(() => {
     let inc = 0, exp = 0, oCount = 0, oAmt = 0;
@@ -34,9 +46,26 @@ function Dashboard() {
   }, [transactions]);
 
   const vatSummary = useMemo(() => getVatSummary(transactions), [transactions]);
+  const upcomingObligations = useMemo(
+    () => getUpcomingAuthorityObligations(authorityObligations, 3),
+    [authorityObligations]
+  );
 
   const net = expectedIncome - expectedExpenses;
   const projected = balance + net;
+
+  const createVatObligation = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    const dueDate = d.toISOString().slice(0, 10);
+    financeStore.addAuthorityObligation({
+      authority: "vat",
+      amount: vatSummary.vatBalance,
+      dueDate,
+      notes: 'מע"מ לתשלום',
+    });
+    navigate({ to: "/authorities" });
+  };
 
   return (
     <AppShell
@@ -156,7 +185,7 @@ function Dashboard() {
         </Link>
       )}
 
-      {/* Upcoming */}
+      {/* Upcoming transactions */}
       <section className="mt-6">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold">קרובים</h2>
@@ -200,6 +229,46 @@ function Dashboard() {
         </ul>
       </section>
 
+      {/* Authority Obligations card */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">התחייבויות לרשויות</h2>
+          <Link to="/authorities" className="text-xs font-medium text-primary">
+            הצג הכל
+          </Link>
+        </div>
+        <Link
+          to="/authorities"
+          className="mt-3 block rounded-3xl border border-border bg-surface p-5 transition active:scale-[0.98]"
+        >
+          {upcomingObligations.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-2 text-center">
+              <Building2 className="h-6 w-6 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">אין התחייבויות פעילות</p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {upcomingObligations.map((o) => {
+                const days = daysUntil(o.dueDate);
+                return (
+                  <li key={o.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{AUTHORITY_LABELS[o.authority]}</p>
+                      <p className={`text-xs ${days < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                        {labelDaysUntil(days)}
+                      </p>
+                    </div>
+                    <p className="font-display text-sm font-bold tabular text-destructive">
+                      {fmt(o.amount)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Link>
+      </section>
+
       {/* VAT Insights */}
       <section className="mt-6">
         <h2 className="font-display text-lg font-semibold">תובנות מע״מ</h2>
@@ -237,6 +306,15 @@ function Dashboard() {
                 : `${fmt(Math.abs(vatSummary.vatBalance))} זכות`}
             </p>
           </div>
+
+          {vatSummary.vatBalance > 0 && (
+            <button
+              onClick={createVatObligation}
+              className="mt-4 w-full rounded-xl border border-warning/40 bg-warning/10 py-2.5 text-sm font-semibold text-warning transition active:scale-[0.98] hover:bg-warning/20"
+            >
+              צור התחייבות מע״מ
+            </button>
+          )}
 
           <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">
             המידע הינו הערכה בלבד ואינו מהווה ייעוץ מס.

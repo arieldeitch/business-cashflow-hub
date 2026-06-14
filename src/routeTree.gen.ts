@@ -14,6 +14,7 @@ import { Route as RecurringRouteImport } from './routes/recurring'
 import { Route as IncomeRouteImport } from './routes/income'
 import { Route as ForecastRouteImport } from './routes/forecast'
 import { Route as ExpenseRouteImport } from './routes/expense'
+import { Route as AuthoritiesRouteImport } from './routes/authorities'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -42,6 +43,11 @@ const ExpenseRoute = ExpenseRouteImport.update({
   path: '/expense',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthoritiesRoute = AuthoritiesRouteImport.update({
+  id: '/authorities',
+  path: '/authorities',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AddRoute = AddRouteImport.update({
   id: '/add',
   path: '/add',
@@ -56,6 +62,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
+  '/authorities': typeof AuthoritiesRoute
   '/expense': typeof ExpenseRoute
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/add': typeof AddRoute
+  '/authorities': typeof AuthoritiesRoute
   '/expense': typeof ExpenseRoute
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/add': typeof AddRoute
+  '/authorities': typeof AuthoritiesRoute
   '/expense': typeof ExpenseRoute
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/add'
+    | '/authorities'
     | '/expense'
     | '/forecast'
     | '/income'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/add'
+    | '/authorities'
     | '/expense'
     | '/forecast'
     | '/income'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/add'
+    | '/authorities'
     | '/expense'
     | '/forecast'
     | '/income'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddRoute: typeof AddRoute
+  AuthoritiesRoute: typeof AuthoritiesRoute
   ExpenseRoute: typeof ExpenseRoute
   ForecastRoute: typeof ForecastRoute
   IncomeRoute: typeof IncomeRoute
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExpenseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/authorities': {
+      id: '/authorities'
+      path: '/authorities'
+      fullPath: '/authorities'
+      preLoaderRoute: typeof AuthoritiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/add': {
       id: '/add'
       path: '/add'
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddRoute: AddRoute,
+  AuthoritiesRoute: AuthoritiesRoute,
   ExpenseRoute: ExpenseRoute,
   ForecastRoute: ForecastRoute,
   IncomeRoute: IncomeRoute,
