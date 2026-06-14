@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { useFinance, fmt, fmtDate, withinDays, getVatSummary } from "@/lib/finance-store";
+import { useFinance, fmt, fmtDate, withinDays, getVatSummary, financeStore } from "@/lib/finance-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -243,6 +243,20 @@ function Dashboard() {
           </p>
         </div>
       </section>
+
+      {/* Reset demo data */}
+      <div className="mt-8 flex justify-center pb-2">
+        <button
+          onClick={() => {
+            if (window.confirm("לאפס את כל הנתונים ולחזור לנתוני הדמו?")) {
+              financeStore.resetToDemo();
+            }
+          }}
+          className="text-[11px] font-medium text-muted-foreground/50 underline-offset-2 transition hover:text-muted-foreground hover:underline"
+        >
+          איפוס נתוני דמו
+        </button>
+      </div>
     </AppShell>
   );
 }

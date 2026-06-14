@@ -6,24 +6,79 @@ export type TxStatus = "paid" | "pending" | "overdue";
 export interface Transaction {
   id: string;
   type: TxType;
-  // VAT-aware amounts
   amountBeforeVat: number;
   vatAmount: number;
   amountIncludingVat: number;
-  vatRate: number;     // 0.17 = standard, 0 = exempt
+  vatRate: number;
   vatExempt: boolean;
-  amount: number;      // alias for amountIncludingVat (used throughout for display)
+  amount: number; // alias for amountIncludingVat
   party: string;
   category?: string;
-  date: string;        // ISO yyyy-mm-dd (due / expected)
+  date: string; // ISO yyyy-mm-dd
   status: TxStatus;
 }
 
 export interface VatSummary {
-  outputVat: number;  // VAT collected from customers
-  inputVat: number;   // VAT paid to suppliers
-  vatBalance: number; // positive = owe government, negative = credit
+  outputVat: number;
+  inputVat: number;
+  vatBalance: number;
 }
+
+// ─── Persistence ────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = "cashflow_os_state";
+const STORAGE_VERSION = 1;
+
+type StoreData = { balance: number; transactions: Transaction[] };
+type StoragePayload = { version: number; data: StoreData };
+
+/**
+ * Converts raw localStorage JSON to StoreData.
+ * Add a new `if (p.version === N)` block here whenever the schema changes.
+ */
+function migrate(raw: unknown): StoreData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+
+  if (p.version === 1) {
+    const d = p.data as Record<string, unknown> | undefined;
+    if (
+      d &&
+      typeof d.balance === "number" &&
+      Array.isArray(d.transactions)
+    ) {
+      return { balance: d.balance, transactions: d.transactions as Transaction[] };
+    }
+  }
+
+  // Future migrations:
+  // if (p.version === 0) { return migrateV0toV1(p.data); }
+
+  return null; // Unknown version — fall back to seed data
+}
+
+function loadState(): StoreData | null {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return migrate(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function saveState(s: StoreData): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    const payload: StoragePayload = { version: STORAGE_VERSION, data: s };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Storage full or unavailable — fail silently
+  }
+}
+
+// ─── Seed data ───────────────────────────────────────────────────────────────
 
 function vatFields(amountBeforeVat: number, vatExempt: boolean) {
   const vatRate = vatExempt ? 0 : 0.17;
@@ -40,29 +95,33 @@ const addDays = (n: number) => {
   return iso(d);
 };
 
-const seed: Transaction[] = [
-  { id: "t1", type: "income", party: "Wix", date: addDays(-12), status: "paid", ...vatFields(15000, false) },
-  { id: "t2", type: "income", party: "Monday.com", date: addDays(-3), status: "paid", ...vatFields(8000, false) },
-  { id: "t3", type: "income", party: "לקוח פרטי", date: addDays(4), status: "pending", ...vatFields(12000, false) },
-  { id: "t4", type: "income", party: "סוכנות דיגיטל", date: addDays(11), status: "pending", ...vatFields(6500, false) },
-  { id: "t5", type: "income", party: "Monday.com", date: addDays(22), status: "pending", ...vatFields(18000, false) },
-  { id: "t6", type: "income", party: "לקוח פרטי", date: addDays(-6), status: "overdue", ...vatFields(3500, false) },
+function buildSeed(): Transaction[] {
+  return [
+    { id: "t1",  type: "income",  party: "Wix",            date: addDays(-12), status: "paid",    ...vatFields(15000, false) },
+    { id: "t2",  type: "income",  party: "Monday.com",      date: addDays(-3),  status: "paid",    ...vatFields(8000,  false) },
+    { id: "t3",  type: "income",  party: "לקוח פרטי",       date: addDays(4),   status: "pending", ...vatFields(12000, false) },
+    { id: "t4",  type: "income",  party: "סוכנות דיגיטל",   date: addDays(11),  status: "pending", ...vatFields(6500,  false) },
+    { id: "t5",  type: "income",  party: "Monday.com",      date: addDays(22),  status: "pending", ...vatFields(18000, false) },
+    { id: "t6",  type: "income",  party: "לקוח פרטי",       date: addDays(-6),  status: "overdue", ...vatFields(3500,  false) },
+    { id: "t7",  type: "expense", party: "שכירות משרד",     category: "שכירות",  date: addDays(2),   status: "pending", ...vatFields(5000,  false) },
+    { id: "t8",  type: "expense", party: "Adobe",            category: "תוכנה",   date: addDays(7),   status: "pending", ...vatFields(1000,  false) },
+    { id: "t9",  type: "expense", party: "רואה חשבון",      category: "ייעוץ",   date: addDays(14),  status: "pending", ...vatFields(2500,  false) },
+    { id: "t10", type: "expense", party: "פלאפון",           category: "תקשורת",  date: addDays(-1),  status: "overdue", ...vatFields(800,   false) },
+    { id: "t11", type: "expense", party: "Figma",            category: "תוכנה",   date: addDays(18),  status: "pending", ...vatFields(1500,  false) },
+    { id: "t12", type: "expense", party: "בזק",              category: "תקשורת",  date: addDays(-9),  status: "paid",    ...vatFields(600,   false) },
+  ];
+}
 
-  { id: "t7", type: "expense", party: "שכירות משרד", category: "שכירות", date: addDays(2), status: "pending", ...vatFields(5000, false) },
-  { id: "t8", type: "expense", party: "Adobe", category: "תוכנה", date: addDays(7), status: "pending", ...vatFields(1000, false) },
-  { id: "t9", type: "expense", party: "רואה חשבון", category: "ייעוץ", date: addDays(14), status: "pending", ...vatFields(2500, false) },
-  { id: "t10", type: "expense", party: "פלאפון", category: "תקשורת", date: addDays(-1), status: "overdue", ...vatFields(800, false) },
-  { id: "t11", type: "expense", party: "Figma", category: "תוכנה", date: addDays(18), status: "pending", ...vatFields(1500, false) },
-  { id: "t12", type: "expense", party: "בזק", category: "תקשורת", date: addDays(-9), status: "paid", ...vatFields(600, false) },
-];
+// ─── Store ───────────────────────────────────────────────────────────────────
 
-let state: { balance: number; transactions: Transaction[] } = {
-  balance: 42850,
-  transactions: seed,
-};
+let state: StoreData = loadState() ?? { balance: 42850, transactions: buildSeed() };
 
 const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
+
+const emit = () => {
+  saveState(state);
+  listeners.forEach((l) => l());
+};
 
 type AddTxPayload = {
   type: TxType;
@@ -110,6 +169,10 @@ export const financeStore = {
         t.id === id ? { ...t, status: "paid" } : t
       ),
     };
+    emit();
+  },
+  resetToDemo: () => {
+    state = { balance: 42850, transactions: buildSeed() };
     emit();
   },
 };
