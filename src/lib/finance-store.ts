@@ -379,6 +379,12 @@ export const financeStore = {
     emit();
   },
 
+  // ── Balance ──
+  setBalance: (n: number) => {
+    state = { ...state, balance: n };
+    emit();
+  },
+
   // ── Reset ──
   resetToDemo: () => {
     state = {

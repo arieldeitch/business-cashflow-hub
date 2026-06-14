@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -29,6 +29,8 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { balance, transactions, authorityObligations } = useFinance();
   const [hidden, setHidden] = useState(false);
+  const [editingBalance, setEditingBalance] = useState(false);
+  const [balanceDraft, setBalanceDraft] = useState("");
   const navigate = useNavigate();
 
   const { expectedIncome, expectedExpenses, overdueCount, overdueAmount } = useMemo(() => {
@@ -167,31 +169,84 @@ function Dashboard() {
           <span className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">
             יתרה נוכחית
           </span>
-          <button
-            onClick={() => setHidden((v) => !v)}
-            className="grid h-8 w-8 place-items-center rounded-full bg-black/15"
-            aria-label="הצג/הסתר יתרה"
-          >
-            {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
+          {!editingBalance && (
+            <button
+              onClick={() => setHidden((v) => !v)}
+              className="grid h-8 w-8 place-items-center rounded-full bg-black/15"
+              aria-label="הצג/הסתר יתרה"
+            >
+              {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          )}
         </div>
-        <p className="mt-3 font-display text-4xl font-bold tabular">
-          {hidden ? "••••••" : fmt(balance)}
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-2xl bg-black/15 p-3">
-            <p className="opacity-80">תחזית (30 יום)</p>
-            <p className="mt-1 font-display text-lg font-semibold tabular">
-              {hidden ? "••••" : fmt(projected)}
-            </p>
+
+        {editingBalance ? (
+          <div className="mt-3">
+            <div className="flex items-baseline gap-2">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={balanceDraft}
+                onChange={(e) => setBalanceDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                className="w-full rounded-xl bg-black/20 px-3 py-2 font-display text-3xl font-bold tabular text-primary-foreground placeholder:text-white/40 outline-none"
+                placeholder="0"
+                autoFocus
+              />
+              <span className="font-display text-xl opacity-70">₪</span>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => setEditingBalance(false)}
+                className="flex-1 rounded-xl bg-black/20 py-2 text-sm font-semibold transition active:scale-[0.98]"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={() => {
+                  const n = Number(balanceDraft);
+                  if (!isNaN(n) && balanceDraft !== "") financeStore.setBalance(n);
+                  setEditingBalance(false);
+                }}
+                className="flex-1 rounded-xl bg-white/20 py-2 text-sm font-semibold transition active:scale-[0.98]"
+              >
+                שמור
+              </button>
+            </div>
           </div>
-          <div className="rounded-2xl bg-black/15 p-3">
-            <p className="opacity-80">נטו צפוי</p>
-            <p className={`mt-1 font-display text-lg font-semibold tabular ${net >= 0 ? "" : "text-destructive-foreground"}`}>
-              {net >= 0 ? "+" : "−"}{hidden ? "••••" : fmt(Math.abs(net))}
+        ) : (
+          <>
+            <p className="mt-3 font-display text-4xl font-bold tabular">
+              {hidden ? "••••••" : fmt(balance)}
             </p>
+            <button
+              onClick={() => {
+                setBalanceDraft(String(balance));
+                setEditingBalance(true);
+              }}
+              className="mt-2 flex items-center gap-1 text-xs opacity-60 transition hover:opacity-90 active:scale-[0.98]"
+            >
+              <Pencil className="h-3 w-3" />
+              עדכון יתרה
+            </button>
+          </>
+        )}
+
+        {!editingBalance && (
+          <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+            <div className="rounded-2xl bg-black/15 p-3">
+              <p className="opacity-80">תחזית (30 יום)</p>
+              <p className="mt-1 font-display text-lg font-semibold tabular">
+                {hidden ? "••••" : fmt(projected)}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-black/15 p-3">
+              <p className="opacity-80">נטו צפוי</p>
+              <p className={`mt-1 font-display text-lg font-semibold tabular ${net >= 0 ? "" : "text-destructive-foreground"}`}>
+                {net >= 0 ? "+" : "−"}{hidden ? "••••" : fmt(Math.abs(net))}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Quick actions */}
