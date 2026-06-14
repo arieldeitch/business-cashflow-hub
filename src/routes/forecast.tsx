@@ -127,10 +127,11 @@ function Forecast() {
             />
           )}
         </svg>
+        {/* Labels reversed in DOM so RTL flex places them correctly over the LTR SVG */}
         <div className="mt-1 flex justify-between text-[10px] font-medium opacity-70">
-          <span>היום</span>
-          <span>+15 יום</span>
           <span>+30 יום</span>
+          <span>+15 יום</span>
+          <span>היום</span>
         </div>
       </section>
 
