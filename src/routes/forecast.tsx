@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
-import { useFinance, fmt } from "@/lib/finance-store";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { useFinance, fmt, localISO, getRecurringInWindow } from "@/lib/finance-store";
+import { TrendingUp, TrendingDown, Repeat } from "lucide-react";
 
 export const Route = createFileRoute("/forecast")({
   head: () => ({ meta: [{ title: "תחזית — Cashflow OS" }] }),
@@ -16,12 +16,16 @@ function fmtShortDate(d: Date): string {
 }
 
 function Forecast() {
-  const { balance, transactions } = useFinance();
+  const { balance, transactions, recurringExpenses } = useFinance();
 
   const { days, totalIn, totalOut, finalBalance, minBalance, maxBalance } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dayList: { date: Date; balance: number; in: number; out: number }[] = [];
+
+    // Pre-compute recurring occurrences for the 30-day window
+    const recurringByDate = getRecurringInWindow(recurringExpenses, 30);
+
+    const dayList: { date: Date; balance: number; in: number; out: number; recurring: number }[] = [];
     let running = balance;
     let totalIn = 0;
     let totalOut = 0;
@@ -29,19 +33,24 @@ function Forecast() {
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
-      const iso = d.toISOString().slice(0, 10);
+      const dateKey = localISO(d);
+
       let inToday = 0;
       let outToday = 0;
       for (const t of transactions) {
-        if (t.date === iso && t.status !== "paid") {
+        if (t.date === dateKey && t.status !== "paid") {
           if (t.type === "income") inToday += t.amount;
           else outToday += t.amount;
         }
       }
+
+      const recurringOut = recurringByDate.get(dateKey) ?? 0;
+      outToday += recurringOut;
+
       running += inToday - outToday;
       totalIn += inToday;
       totalOut += outToday;
-      dayList.push({ date: d, balance: running, in: inToday, out: outToday });
+      dayList.push({ date: d, balance: running, in: inToday, out: outToday, recurring: recurringOut });
     }
 
     const balances = dayList.map((d) => d.balance);
@@ -53,7 +62,7 @@ function Forecast() {
       minBalance: Math.min(...balances, balance),
       maxBalance: Math.max(...balances, balance),
     };
-  }, [balance, transactions]);
+  }, [balance, transactions, recurringExpenses]);
 
   const net = totalIn - totalOut;
 
@@ -70,6 +79,8 @@ function Forecast() {
   });
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   const areaD = `${pathD} L${points[points.length - 1][0]},${H} L${points[0][0]},${H} Z`;
+
+  const daysWithFlow = days.filter((d) => d.in || d.out);
 
   return (
     <AppShell title="תחזית 30 יום" subtitle="תחזית תזרים">
@@ -125,19 +136,39 @@ function Forecast() {
         </div>
       </section>
 
+      {/* Daily flow */}
       <section className="mt-6">
-        <h2 className="mb-3 font-display text-lg font-semibold">תזרים יומי</h2>
-        <ul className="space-y-2">
-          {days
-            .filter((d) => d.in || d.out)
-            .slice(0, 8)
-            .map((d) => (
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">תזרים יומי</h2>
+          <Link
+            to="/recurring"
+            className="flex items-center gap-1 text-xs font-medium text-primary"
+          >
+            <Repeat className="h-3 w-3" />
+            ניהול קבועות
+          </Link>
+        </div>
+        {daysWithFlow.length === 0 ? (
+          <p className="rounded-2xl border border-border bg-surface p-6 text-center text-sm text-muted-foreground">
+            אין פעולות צפויות ב-30 הימים הקרובים.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {daysWithFlow.slice(0, 10).map((d) => (
               <li
                 key={d.date.toISOString()}
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border bg-surface p-3"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold">{fmtShortDate(d.date)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold">{fmtShortDate(d.date)}</p>
+                    {d.recurring > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                        <Repeat className="h-2.5 w-2.5" />
+                        קבועה
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground tabular">יתרה {fmt(d.balance)}</p>
                 </div>
                 <div className="text-right text-xs tabular">
@@ -146,7 +177,8 @@ function Forecast() {
                 </div>
               </li>
             ))}
-        </ul>
+          </ul>
+        )}
       </section>
     </AppShell>
   );

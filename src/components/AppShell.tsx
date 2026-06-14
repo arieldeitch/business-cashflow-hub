@@ -1,5 +1,5 @@
 import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
-import { Home, ListChecks, TrendingUp, Plus } from "lucide-react";
+import { Home, ListChecks, TrendingUp, Plus, Repeat } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -38,9 +38,13 @@ export function AppShell({ children, title, subtitle, header }: Props) {
   );
 }
 
-const tabs: { to: LinkProps["to"]; label: string; icon: typeof Home }[] = [
+// 2 tabs left of FAB + 2 tabs right of FAB
+const leftTabs: { to: LinkProps["to"]; label: string; icon: typeof Home }[] = [
   { to: "/", label: "בית", icon: Home },
   { to: "/transactions", label: "פעילות", icon: ListChecks },
+];
+const rightTabs: { to: LinkProps["to"]; label: string; icon: typeof Home }[] = [
+  { to: "/recurring", label: "קבועות", icon: Repeat },
   { to: "/forecast", label: "תחזית", icon: TrendingUp },
 ];
 
@@ -49,10 +53,9 @@ function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-5 pointer-events-none">
       <div className="pointer-events-auto relative flex w-[calc(100%-2.5rem)] max-w-[440px] items-center justify-between rounded-full border border-border/60 bg-surface-elevated/95 px-2 py-2 shadow-[0_8px_32px_-12px_oklch(0_0_0/0.6)] backdrop-blur">
-        {tabs.slice(0, 1).map((t) => (
-          <TabItem key={t.to} {...t} active={pathname === t.to} />
+        {leftTabs.map((t) => (
+          <TabItem key={String(t.to)} {...t} active={pathname === t.to} />
         ))}
-        <TabItem {...tabs[1]} active={pathname === tabs[1].to} />
         <Link
           to="/add"
           className="-mt-8 grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.82_0.16_162/0.5)] transition active:scale-95"
@@ -60,8 +63,9 @@ function BottomNav() {
         >
           <Plus className="h-6 w-6" strokeWidth={2.5} />
         </Link>
-        <TabItem {...tabs[2]} active={pathname === tabs[2].to} />
-        <TabItem to="/transactions" label="פעילות" icon={ListChecks} hidden active={false} />
+        {rightTabs.map((t) => (
+          <TabItem key={String(t.to)} {...t} active={pathname === t.to} />
+        ))}
       </div>
     </nav>
   );
@@ -72,19 +76,16 @@ function TabItem({
   label,
   icon: Icon,
   active,
-  hidden,
 }: {
   to: LinkProps["to"];
   label: string;
   icon: typeof Home;
   active: boolean;
-  hidden?: boolean;
 }) {
-  if (hidden) return <span className="invisible w-12" aria-hidden />;
   return (
     <Link
       to={to}
-      className={`flex w-16 flex-col items-center gap-0.5 rounded-full py-2 text-[10px] font-medium transition ${
+      className={`flex w-14 flex-col items-center gap-0.5 rounded-full py-2 text-[9px] font-medium transition ${
         active ? "text-primary" : "text-muted-foreground"
       }`}
     >
