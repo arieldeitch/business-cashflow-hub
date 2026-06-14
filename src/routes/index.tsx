@@ -249,7 +249,7 @@ function Dashboard() {
         )}
       </section>
 
-      {/* Quick actions */}
+      {/* Quick actions — primary (create) */}
       <section className="mt-5 grid grid-cols-2 gap-3">
         <Link
           to="/income"
@@ -273,6 +273,34 @@ function Dashboard() {
           <div className="min-w-0">
             <p className="text-sm font-semibold">הוסף הוצאה</p>
             <p className="text-xs text-muted-foreground">חשבון או עלות</p>
+          </div>
+        </Link>
+      </section>
+
+      {/* Quick navigation — secondary (core workflows) */}
+      <section className="mt-3 grid grid-cols-2 gap-3">
+        <Link
+          to="/collections"
+          className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3 transition active:scale-[0.98]"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-success/15 text-success">
+            <Banknote className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">גבייה</p>
+            <p className="text-xs text-muted-foreground">מעקב הכנסות</p>
+          </div>
+        </Link>
+        <Link
+          to="/authorities"
+          className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3 transition active:scale-[0.98]"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning">
+            <Building2 className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">רשויות</p>
+            <p className="text-xs text-muted-foreground">מס ותשלומים</p>
           </div>
         </Link>
       </section>

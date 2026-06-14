@@ -1,5 +1,5 @@
 import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
-import { Home, ListChecks, TrendingUp, Plus, Repeat } from "lucide-react";
+import { Home, ListChecks, TrendingUp, Plus, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -44,7 +44,7 @@ const leftTabs: { to: LinkProps["to"]; label: string; icon: typeof Home }[] = [
   { to: "/transactions", label: "פעילות", icon: ListChecks },
 ];
 const rightTabs: { to: LinkProps["to"]; label: string; icon: typeof Home }[] = [
-  { to: "/recurring", label: "קבועות", icon: Repeat },
+  { to: "/collections", label: "גבייה", icon: Users },
   { to: "/forecast", label: "תחזית", icon: TrendingUp },
 ];
 
