@@ -55,6 +55,15 @@ export interface VatSummary {
   vatBalance: number;
 }
 
+export interface CollectionsSummary {
+  totalOpenReceivables: number;
+  totalOverdueReceivables: number;
+  openReceivablesCount: number;
+  overdueReceivablesCount: number;
+  overdueCustomersCount: number;
+  cashInRisk: number;
+}
+
 // ─── Persistence ────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "cashflow_os_state";
@@ -272,6 +281,40 @@ export const financeStore = {
     state = { ...state, transactions: state.transactions.map((t) => t.id === id ? { ...t, status: "paid" } : t) };
     emit();
   },
+  deleteTransaction: (id: string) => {
+    state = { ...state, transactions: state.transactions.filter((t) => t.id !== id) };
+    emit();
+  },
+  updateTransaction: (id: string, payload: { party: string; amountBeforeVat: number; vatExempt: boolean; date: string; category?: string }) => {
+    const vatRate = payload.vatExempt ? 0 : 0.17;
+    const vatAmount = Math.round(payload.amountBeforeVat * vatRate);
+    const amountIncludingVat = payload.amountBeforeVat + vatAmount;
+    state = {
+      ...state,
+      transactions: state.transactions.map((t) => {
+        if (t.id !== id) return t;
+        const [y, m, d] = payload.date.split("-").map(Number);
+        const dueDate = new Date(y, m - 1, d);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const status: TxStatus = t.status === "paid" ? "paid" : dueDate < todayStart ? "overdue" : "pending";
+        return {
+          ...t,
+          party: payload.party,
+          category: payload.category,
+          date: payload.date,
+          status,
+          amountBeforeVat: payload.amountBeforeVat,
+          vatRate,
+          vatAmount,
+          amountIncludingVat,
+          vatExempt: payload.vatExempt,
+          amount: amountIncludingVat,
+        };
+      }),
+    };
+    emit();
+  },
 
   // ── Recurring expenses ──
   addRecurring: (payload: RecurringPayload) => {
@@ -463,4 +506,49 @@ export function withinDays(dateISO: string, days: number) {
   const d = new Date(dateISO).getTime();
   const now = Date.now();
   return d >= now - 86400000 && d <= now + days * 86400000;
+}
+
+/** All income transactions that are not yet paid. */
+export function getOpenReceivables(transactions: Transaction[]): Transaction[] {
+  return transactions.filter((t) => t.type === "income" && (t.status === "pending" || t.status === "overdue"));
+}
+
+/** All income transactions that are overdue. */
+export function getOverdueReceivables(transactions: Transaction[]): Transaction[] {
+  return transactions.filter((t) => t.type === "income" && t.status === "overdue");
+}
+
+/**
+ * cashInRisk = overdue income + pending income due within the next 7 days.
+ * Highlights money that needs immediate attention.
+ */
+export function getCollectionsSummary(transactions: Transaction[]): CollectionsSummary {
+  const open = getOpenReceivables(transactions);
+  const overdue = getOverdueReceivables(transactions);
+  const totalOpenReceivables = open.reduce((s, t) => s + t.amount, 0);
+  const totalOverdueReceivables = overdue.reduce((s, t) => s + t.amount, 0);
+  const overdueCustomers = new Set(overdue.map((t) => t.party));
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const sevenDays = new Date(now);
+  sevenDays.setDate(sevenDays.getDate() + 7);
+  const sevenDaysISO = localISO(sevenDays);
+
+  const cashInRisk = transactions
+    .filter((t) => t.type === "income" && t.status !== "paid")
+    .reduce((s, t) => {
+      if (t.status === "overdue") return s + t.amount;
+      if (t.status === "pending" && t.date <= sevenDaysISO) return s + t.amount;
+      return s;
+    }, 0);
+
+  return {
+    totalOpenReceivables,
+    totalOverdueReceivables,
+    openReceivablesCount: open.length,
+    overdueReceivablesCount: overdue.length,
+    overdueCustomersCount: overdueCustomers.size,
+    cashInRisk,
+  };
 }

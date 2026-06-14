@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell, Building2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell, Building2, Banknote } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -9,6 +9,7 @@ import {
   withinDays,
   getVatSummary,
   getUpcomingAuthorityObligations,
+  getCollectionsSummary,
   labelDaysUntil,
   daysUntil,
   financeStore,
@@ -46,6 +47,7 @@ function Dashboard() {
   }, [transactions]);
 
   const vatSummary = useMemo(() => getVatSummary(transactions), [transactions]);
+  const collectionsSummary = useMemo(() => getCollectionsSummary(transactions), [transactions]);
   const upcomingObligations = useMemo(
     () => getUpcomingAuthorityObligations(authorityObligations, 3),
     [authorityObligations]
@@ -227,6 +229,62 @@ function Dashboard() {
               </li>
             ))}
         </ul>
+      </section>
+
+      {/* Collections card */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">הכנסות צפויות</h2>
+          <Link to="/collections" className="text-xs font-medium text-primary">
+            לגבייה
+          </Link>
+        </div>
+        <Link
+          to="/collections"
+          className="mt-3 block rounded-3xl border border-border bg-surface p-5 transition active:scale-[0.98]"
+        >
+          {collectionsSummary.openReceivablesCount === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-2 text-center">
+              <Banknote className="h-6 w-6 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">אין חובות פתוחים</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  סה״כ פתוח
+                </p>
+                <p className="mt-1 font-display text-lg font-bold tabular">
+                  {fmt(collectionsSummary.totalOpenReceivables)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  באיחור
+                </p>
+                <p className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.totalOverdueReceivables > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {fmt(collectionsSummary.totalOverdueReceivables)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  לקוחות באיחור
+                </p>
+                <p className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.overdueCustomersCount > 0 ? "text-warning" : "text-muted-foreground"}`}>
+                  {collectionsSummary.overdueCustomersCount}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  כסף בסיכון
+                </p>
+                <p className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.cashInRisk > 0 ? "text-warning" : "text-muted-foreground"}`}>
+                  {fmt(collectionsSummary.cashInRisk)}
+                </p>
+              </div>
+            </div>
+          )}
+        </Link>
       </section>
 
       {/* Authority Obligations card */}
