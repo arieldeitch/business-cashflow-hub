@@ -2,13 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDownLeft, ArrowUpRight, AlertTriangle, Eye, EyeOff, Bell } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { useFinance, fmt, withinDays } from "@/lib/finance-store";
+import { useFinance, fmt, fmtDate, withinDays, getVatSummary } from "@/lib/finance-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Business Cashflow OS" },
-      { name: "description", content: "See your cash position, expected income and expenses, and 30-day forecast." },
+      { name: "description", content: "מצב תזרים, הכנסות צפויות, הוצאות ותחזית 30 יום." },
     ],
   }),
   component: Dashboard,
@@ -33,6 +33,8 @@ function Dashboard() {
     return { expectedIncome: inc, expectedExpenses: exp, overdueCount: oCount, overdueAmount: oAmt };
   }, [transactions]);
 
+  const vatSummary = useMemo(() => getVatSummary(transactions), [transactions]);
+
   const net = expectedIncome - expectedExpenses;
   const projected = balance + net;
 
@@ -42,7 +44,7 @@ function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Good morning, Maya
+              תזרים מזומנים
             </p>
             <h1 className="mt-1 font-display text-2xl font-semibold">Cashflow OS</h1>
           </div>
@@ -59,12 +61,12 @@ function Dashboard() {
       >
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">
-            Current Balance
+            יתרה נוכחית
           </span>
           <button
             onClick={() => setHidden((v) => !v)}
             className="grid h-8 w-8 place-items-center rounded-full bg-black/15"
-            aria-label="Toggle balance visibility"
+            aria-label="הצג/הסתר יתרה"
           >
             {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -74,13 +76,13 @@ function Dashboard() {
         </p>
         <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
           <div className="rounded-2xl bg-black/15 p-3">
-            <p className="opacity-80">Projected (30d)</p>
+            <p className="opacity-80">תחזית (30 יום)</p>
             <p className="mt-1 font-display text-lg font-semibold tabular">
               {hidden ? "••••" : fmt(projected)}
             </p>
           </div>
           <div className="rounded-2xl bg-black/15 p-3">
-            <p className="opacity-80">Net Forecast</p>
+            <p className="opacity-80">נטו צפוי</p>
             <p className={`mt-1 font-display text-lg font-semibold tabular ${net >= 0 ? "" : "text-destructive-foreground"}`}>
               {net >= 0 ? "+" : "−"}{hidden ? "••••" : fmt(Math.abs(net))}
             </p>
@@ -98,8 +100,8 @@ function Dashboard() {
             <ArrowDownLeft className="h-5 w-5" strokeWidth={2.4} />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold">Add Income</p>
-            <p className="text-xs text-muted-foreground">Expected payment</p>
+            <p className="text-sm font-semibold">הוסף הכנסה</p>
+            <p className="text-xs text-muted-foreground">תשלום צפוי</p>
           </div>
         </Link>
         <Link
@@ -110,8 +112,8 @@ function Dashboard() {
             <ArrowUpRight className="h-5 w-5" strokeWidth={2.4} />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold">Add Expense</p>
-            <p className="text-xs text-muted-foreground">New bill or cost</p>
+            <p className="text-sm font-semibold">הוסף הוצאה</p>
+            <p className="text-xs text-muted-foreground">חשבון או עלות</p>
           </div>
         </Link>
       </section>
@@ -119,14 +121,14 @@ function Dashboard() {
       {/* 30 day cards */}
       <section className="mt-5 grid grid-cols-2 gap-3">
         <StatCard
-          label="Expected Income"
-          sub="Next 30 days"
+          label="הכנסות צפויות"
+          sub="30 ימים הקרובים"
           amount={expectedIncome}
           tone="success"
         />
         <StatCard
-          label="Expected Expenses"
-          sub="Next 30 days"
+          label="הוצאות צפויות"
+          sub="30 ימים הקרובים"
           amount={expectedExpenses}
           tone="destructive"
         />
@@ -144,22 +146,22 @@ function Dashboard() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
-              {overdueCount} overdue {overdueCount === 1 ? "payment" : "payments"}
+              {overdueCount} {overdueCount === 1 ? "תשלום באיחור" : "תשלומים באיחור"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {fmt(overdueAmount)} needs your attention
+              {fmt(overdueAmount)} דורשים טיפול
             </p>
           </div>
-          <span className="text-xs font-medium text-warning">Review →</span>
+          <span className="text-xs font-medium text-warning">לסקירה ←</span>
         </Link>
       )}
 
       {/* Upcoming */}
       <section className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">Upcoming</h2>
+          <h2 className="font-display text-lg font-semibold">קרובים</h2>
           <Link to="/transactions" className="text-xs font-medium text-primary">
-            See all
+            הצג הכל
           </Link>
         </div>
         <ul className="mt-3 space-y-2">
@@ -186,8 +188,8 @@ function Dashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{t.party}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {t.status === "overdue" && <span className="ml-1 text-warning">· overdue</span>}
+                    {fmtDate(t.date)}
+                    {t.status === "overdue" && <span className="ms-1 text-warning">· באיחור</span>}
                   </p>
                 </div>
                 <p className={`font-display text-sm font-semibold tabular ${t.type === "income" ? "text-success" : "text-foreground"}`}>
@@ -196,6 +198,50 @@ function Dashboard() {
               </li>
             ))}
         </ul>
+      </section>
+
+      {/* VAT Insights */}
+      <section className="mt-6">
+        <h2 className="font-display text-lg font-semibold">תובנות מע״מ</h2>
+        <div className="mt-3 rounded-3xl border border-border bg-surface p-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                מע״מ עסקאות
+              </p>
+              <p className="mt-1 font-display text-lg font-semibold tabular text-success">
+                {fmt(vatSummary.outputVat)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                מע״מ תשומות
+              </p>
+              <p className="mt-1 font-display text-lg font-semibold tabular">
+                {fmt(vatSummary.inputVat)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              יתרת מע״מ משוערת
+            </p>
+            <p
+              className={`mt-1 font-display text-xl font-bold tabular ${
+                vatSummary.vatBalance >= 0 ? "text-warning" : "text-success"
+              }`}
+            >
+              {vatSummary.vatBalance >= 0
+                ? `${fmt(vatSummary.vatBalance)} לתשלום`
+                : `${fmt(Math.abs(vatSummary.vatBalance))} זכות`}
+            </p>
+          </div>
+
+          <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">
+            המידע הינו הערכה בלבד ואינו מהווה ייעוץ מס.
+          </p>
+        </div>
       </section>
     </AppShell>
   );
