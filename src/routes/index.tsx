@@ -6,10 +6,10 @@ import {
   useFinance,
   fmt,
   fmtDate,
-  withinDays,
   getVatSummary,
   getUpcomingAuthorityObligations,
   getCollectionsSummary,
+  get30DayProjection,
   labelDaysUntil,
   daysUntil,
   financeStore,
@@ -27,26 +27,28 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { balance, startingBalance, transactions, authorityObligations } = useFinance();
+  const { balance, startingBalance, transactions, recurringExpenses, authorityObligations } = useFinance();
   const [hidden, setHidden] = useState(false);
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState("");
   const navigate = useNavigate();
 
-  const { expectedIncome, expectedExpenses, overdueCount, overdueAmount } = useMemo(() => {
-    let inc = 0, exp = 0, oCount = 0, oAmt = 0;
+  // Overdue alert banner counts (independent of projection window)
+  const { overdueCount, overdueAmount } = useMemo(() => {
+    let oCount = 0, oAmt = 0;
     for (const t of transactions) {
-      if (t.status === "overdue") {
-        oCount++;
-        oAmt += t.amount;
-      }
-      if (t.status === "pending" && withinDays(t.date, 30)) {
-        if (t.type === "income") inc += t.amount;
-        else exp += t.amount;
-      }
+      if (t.status === "overdue") { oCount++; oAmt += t.amount; }
     }
-    return { expectedIncome: inc, expectedExpenses: exp, overdueCount: oCount, overdueAmount: oAmt };
+    return { overdueCount: oCount, overdueAmount: oAmt };
   }, [transactions]);
+
+  // 30-day projection — shared logic with Forecast screen
+  const { expectedIncome, expectedExpenses, projected } = useMemo(
+    () => get30DayProjection({ transactions, recurringExpenses, authorityObligations }, balance),
+    [balance, transactions, recurringExpenses, authorityObligations]
+  );
+
+  const net = expectedIncome - expectedExpenses;
 
   const vatSummary = useMemo(() => getVatSummary(transactions), [transactions]);
   const collectionsSummary = useMemo(() => getCollectionsSummary(transactions), [transactions]);
@@ -54,9 +56,6 @@ function Dashboard() {
     () => getUpcomingAuthorityObligations(authorityObligations, 3),
     [authorityObligations]
   );
-
-  const net = expectedIncome - expectedExpenses;
-  const projected = balance + net;
 
   const healthInsights = useMemo(() => {
     type Tone = "success" | "warning" | "destructive";

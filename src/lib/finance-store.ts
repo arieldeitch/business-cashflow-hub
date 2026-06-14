@@ -542,6 +542,60 @@ export function withinDays(dateISO: string, days: number) {
   return d >= now - 86400000 && d <= now + days * 86400000;
 }
 
+// ─── Shared 30-day projection ─────────────────────────────────────────────────
+
+export interface ProjectionTotals {
+  expectedIncome: number;
+  expectedExpenses: number;
+  projected: number;
+}
+
+/**
+ * Single source of truth for 30-day cashflow projection.
+ * Accepts the pre-computed currentBalance (from computeCurrentBalance / A2)
+ * so it never re-derives it from startingBalance — avoids double-counting.
+ *
+ * Income:   all non-paid income with date ≤ today+30 (includes overdue past dates)
+ * Expenses: all non-paid expenses with date ≤ today+30 + recurring + authority obligations
+ *
+ * Used by Dashboard and Forecast to guarantee identical numbers.
+ */
+export function get30DayProjection(
+  data: Pick<StoreData, "transactions" | "recurringExpenses" | "authorityObligations">,
+  currentBalance: number
+): ProjectionTotals {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d30 = new Date(today);
+  d30.setDate(d30.getDate() + 30);
+  const d30ISO = localISO(d30);
+
+  let income = 0;
+  let expenses = 0;
+
+  for (const t of data.transactions) {
+    if (t.status === "paid") continue;
+    // date <= d30ISO covers past (overdue) and future-pending within 30 days
+    if (t.date <= d30ISO) {
+      if (t.type === "income") income += t.amount;
+      else expenses += t.amount;
+    }
+  }
+
+  const recurringMap = getRecurringInWindow(data.recurringExpenses, 30);
+  for (const [, amt] of recurringMap) expenses += amt;
+
+  for (const o of data.authorityObligations) {
+    if (o.status === "pending" && o.dueDate <= d30ISO) expenses += o.amount;
+  }
+
+  return {
+    expectedIncome: income,
+    expectedExpenses: expenses,
+    projected: currentBalance + income - expenses,
+  };
+}
+
 /** All income transactions that are not yet paid. */
 export function getOpenReceivables(transactions: Transaction[]): Transaction[] {
   return transactions.filter((t) => t.type === "income" && (t.status === "pending" || t.status === "overdue"));

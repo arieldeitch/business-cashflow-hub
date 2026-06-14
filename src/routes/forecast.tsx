@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useFinance, fmt, localISO, getRecurringInWindow } from "@/lib/finance-store";
-import { TrendingUp, TrendingDown, Repeat, Building2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Repeat, Building2, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/forecast")({
   head: () => ({ meta: [{ title: "תחזית — Cashflow OS" }] }),
@@ -39,6 +39,7 @@ function Forecast() {
       out: number;
       recurring: number;
       authority: number;
+      overdueIn: number;
     }[] = [];
     let running = balance;
     let totalIn = 0;
@@ -51,8 +52,15 @@ function Forecast() {
 
       let inToday = 0;
       let outToday = 0;
+      let overdueIn = 0;
+
       for (const t of transactions) {
-        if (t.date === dateKey && t.status !== "paid") {
+        if (t.status === "paid") continue;
+        if (i === 0 && t.status === "overdue") {
+          // Bucket all overdue receivables/payables as Day 0 flows
+          if (t.type === "income") { inToday += t.amount; overdueIn += t.amount; }
+          else outToday += t.amount;
+        } else if (t.date === dateKey && t.status === "pending") {
           if (t.type === "income") inToday += t.amount;
           else outToday += t.amount;
         }
@@ -65,7 +73,7 @@ function Forecast() {
       running += inToday - outToday;
       totalIn += inToday;
       totalOut += outToday;
-      dayList.push({ date: d, balance: running, in: inToday, out: outToday, recurring: recurringOut, authority: authorityOut });
+      dayList.push({ date: d, balance: running, in: inToday, out: outToday, recurring: recurringOut, authority: authorityOut, overdueIn });
     }
 
     const balances = dayList.map((d) => d.balance);
@@ -187,6 +195,12 @@ function Forecast() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold">{fmtShortDate(d.date)}</p>
+                    {d.overdueIn > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-medium text-destructive">
+                        <AlertCircle className="h-2.5 w-2.5" />
+                        איחור
+                      </span>
+                    )}
                     {d.recurring > 0 && (
                       <span className="flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
                         <Repeat className="h-2.5 w-2.5" />
