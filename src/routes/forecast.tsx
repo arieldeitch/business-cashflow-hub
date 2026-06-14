@@ -5,9 +5,15 @@ import { useFinance, fmt } from "@/lib/finance-store";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 export const Route = createFileRoute("/forecast")({
-  head: () => ({ meta: [{ title: "Forecast — Cashflow OS" }] }),
+  head: () => ({ meta: [{ title: "תחזית — Cashflow OS" }] }),
   component: Forecast,
 });
+
+function fmtShortDate(d: Date): string {
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}`;
+}
 
 function Forecast() {
   const { balance, transactions } = useFinance();
@@ -66,15 +72,15 @@ function Forecast() {
   const areaD = `${pathD} L${points[points.length - 1][0]},${H} L${points[0][0]},${H} Z`;
 
   return (
-    <AppShell title="30-Day Forecast" subtitle="Cashflow Projection">
+    <AppShell title="תחזית 30 יום" subtitle="תחזית תזרים">
       <section
         className="rounded-3xl p-5 text-primary-foreground"
         style={{ background: "var(--gradient-balance)" }}
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">Projected Balance</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">יתרה צפויה</p>
         <p className="mt-2 font-display text-3xl font-bold tabular">{fmt(finalBalance)}</p>
         <p className="mt-1 text-xs opacity-80">
-          From {fmt(balance)} today · {net >= 0 ? "+" : "−"}{fmt(Math.abs(net))} net
+          מ־{fmt(balance)} היום · {net >= 0 ? "+" : "−"}{fmt(Math.abs(net))} נטו
         </p>
 
         <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 h-40 w-full">
@@ -96,9 +102,9 @@ function Forecast() {
           )}
         </svg>
         <div className="mt-1 flex justify-between text-[10px] font-medium opacity-70">
-          <span>Today</span>
-          <span>+15d</span>
-          <span>+30d</span>
+          <span>היום</span>
+          <span>+15 יום</span>
+          <span>+30 יום</span>
         </div>
       </section>
 
@@ -106,21 +112,21 @@ function Forecast() {
         <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center gap-2 text-success">
             <TrendingUp className="h-4 w-4" />
-            <p className="text-[11px] font-medium uppercase tracking-wider">Expected In</p>
+            <p className="text-[11px] font-medium uppercase tracking-wider">צפוי להיכנס</p>
           </div>
           <p className="mt-2 font-display text-xl font-semibold tabular">{fmt(totalIn)}</p>
         </div>
         <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center gap-2 text-destructive">
             <TrendingDown className="h-4 w-4" />
-            <p className="text-[11px] font-medium uppercase tracking-wider">Expected Out</p>
+            <p className="text-[11px] font-medium uppercase tracking-wider">צפוי לצאת</p>
           </div>
           <p className="mt-2 font-display text-xl font-semibold tabular">{fmt(totalOut)}</p>
         </div>
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-3 font-display text-lg font-semibold">Daily flow</h2>
+        <h2 className="mb-3 font-display text-lg font-semibold">תזרים יומי</h2>
         <ul className="space-y-2">
           {days
             .filter((d) => d.in || d.out)
@@ -131,10 +137,8 @@ function Forecast() {
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border bg-surface p-3"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold">
-                    {d.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                  </p>
-                  <p className="text-xs text-muted-foreground tabular">Balance {fmt(d.balance)}</p>
+                  <p className="text-sm font-semibold">{fmtShortDate(d.date)}</p>
+                  <p className="text-xs text-muted-foreground tabular">יתרה {fmt(d.balance)}</p>
                 </div>
                 <div className="text-right text-xs tabular">
                   {d.in > 0 && <p className="font-semibold text-success">+{fmt(d.in)}</p>}

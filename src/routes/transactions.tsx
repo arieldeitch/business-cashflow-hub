@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
-import { useFinance, fmt, type Transaction } from "@/lib/finance-store";
+import { useFinance, fmt, fmtDate, financeStore, type Transaction } from "@/lib/finance-store";
 
 type Filter = "all" | "income" | "expense" | "paid" | "pending" | "overdue";
 
@@ -12,18 +12,18 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/transactions")({
-  head: () => ({ meta: [{ title: "Activity — Cashflow OS" }] }),
+  head: () => ({ meta: [{ title: "פעילות — Cashflow OS" }] }),
   validateSearch: searchSchema,
   component: Transactions,
 });
 
 const FILTERS: { id: Filter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "income", label: "Income" },
-  { id: "expense", label: "Expense" },
-  { id: "paid", label: "Paid" },
-  { id: "pending", label: "Pending" },
-  { id: "overdue", label: "Overdue" },
+  { id: "all", label: "הכל" },
+  { id: "income", label: "הכנסות" },
+  { id: "expense", label: "הוצאות" },
+  { id: "paid", label: "שולם" },
+  { id: "pending", label: "ממתין" },
+  { id: "overdue", label: "באיחור" },
 ];
 
 function Transactions() {
@@ -44,7 +44,7 @@ function Transactions() {
   const groups = useMemo(() => groupByMonth(filtered), [filtered]);
 
   return (
-    <AppShell title="Activity" subtitle="Transactions">
+    <AppShell title="פעילות" subtitle="עסקאות">
       <div className="-mx-5 overflow-x-auto px-5 pb-2">
         <div className="flex gap-2">
           {FILTERS.map((f) => {
@@ -69,7 +69,7 @@ function Transactions() {
       <div className="mt-4 space-y-6">
         {groups.length === 0 && (
           <p className="rounded-2xl border border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-            No transactions yet.
+            אין פעולות להצגה.
           </p>
         )}
         {groups.map(([label, items]) => (
@@ -93,14 +93,11 @@ function Transactions() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{t.party}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(t.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {fmtDate(t.date)}
                       {t.category && <span> · {t.category}</span>}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="flex flex-col items-end gap-1">
                     <p
                       className={`font-display text-sm font-semibold tabular ${
                         t.type === "income" ? "text-success" : "text-foreground"
@@ -109,7 +106,19 @@ function Transactions() {
                       {t.type === "income" ? "+" : "−"}
                       {fmt(t.amount)}
                     </p>
-                    <StatusPill status={t.status} />
+                    <div className="flex items-center gap-1.5">
+                      <StatusPill status={t.status} />
+                      {t.status !== "paid" && (
+                        <button
+                          onClick={() => financeStore.markAsPaid(t.id)}
+                          className="flex items-center gap-1 rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:border-success hover:text-success"
+                          title="סמן כשולם"
+                        >
+                          <Check className="h-2.5 w-2.5" />
+                          שולם
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}
@@ -127,9 +136,14 @@ function StatusPill({ status }: { status: Transaction["status"] }) {
     pending: "bg-muted text-muted-foreground",
     overdue: "bg-warning/15 text-warning",
   } as const;
+  const labels = {
+    paid: "שולם",
+    pending: "ממתין",
+    overdue: "באיחור",
+  } as const;
   return (
-    <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${map[status]}`}>
-      {status}
+    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${map[status]}`}>
+      {labels[status]}
     </span>
   );
 }
@@ -137,7 +151,11 @@ function StatusPill({ status }: { status: Transaction["status"] }) {
 function groupByMonth(items: Transaction[]): [string, Transaction[]][] {
   const map = new Map<string, Transaction[]>();
   for (const t of items) {
-    const label = new Date(t.date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const [y, m] = t.date.split("-");
+    const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("he-IL", {
+      month: "long",
+      year: "numeric",
+    });
     if (!map.has(label)) map.set(label, []);
     map.get(label)!.push(t);
   }
