@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote, Pencil } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote, Pencil, ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -367,31 +367,37 @@ function Dashboard() {
         ) : (
           <ul className="mt-3 space-y-2">
             {upcomingTxs.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
-              >
-                <span
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                    t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
-                  }`}
+              <li key={t.id}>
+                <Link
+                  to="/transaction/$id"
+                  params={{ id: t.id }}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3 transition active:scale-[0.98]"
                 >
-                  {t.type === "income" ? (
-                    <ArrowDownLeft className="h-5 w-5" />
-                  ) : (
-                    <ArrowUpRight className="h-5 w-5" />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{t.party}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {fmtDate(t.date)}
-                    {t.status === "overdue" && <span className="ms-1 text-warning">· באיחור</span>}
-                  </p>
-                </div>
-                <p className={`font-display text-sm font-semibold tabular ${t.type === "income" ? "text-success" : "text-foreground"}`}>
-                  {t.type === "income" ? "+" : "−"}{fmt(t.amount)}
-                </p>
+                  <span
+                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                      t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                    }`}
+                  >
+                    {t.type === "income" ? (
+                      <ArrowDownLeft className="h-5 w-5" />
+                    ) : (
+                      <ArrowUpRight className="h-5 w-5" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{t.party}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {fmtDate(t.date)}
+                      {t.status === "overdue" && <span className="ms-1 text-warning">· באיחור</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className={`font-display text-sm font-semibold tabular ${t.type === "income" ? "text-success" : "text-foreground"}`}>
+                      {t.type === "income" ? "+" : "−"}{fmt(t.amount)}
+                    </p>
+                    <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>

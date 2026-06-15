@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TransactionIdRouteImport } from './routes/transaction.$id'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as RecurringRouteImport } from './routes/recurring'
 import { Route as IncomeRouteImport } from './routes/income'
@@ -19,6 +20,11 @@ import { Route as AuthoritiesRouteImport } from './routes/authorities'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TransactionIdRoute = TransactionIdRouteImport.update({
+  id: '/transaction/$id',
+  path: '/transaction/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
   '/recurring': typeof RecurringRoute
+  '/transaction/$id': typeof TransactionIdRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
   '/recurring': typeof RecurringRoute
+  '/transaction/$id': typeof TransactionIdRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
   '/recurring': typeof RecurringRoute
+  '/transaction/$id': typeof TransactionIdRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/forecast'
     | '/income'
     | '/recurring'
+    | '/transaction/$id'
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/forecast'
     | '/income'
     | '/recurring'
+    | '/transaction/$id'
     | '/transactions'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/forecast'
     | '/income'
     | '/recurring'
+    | '/transaction/$id'
     | '/transactions'
   fileRoutesById: FileRoutesById
 }
@@ -144,11 +156,19 @@ export interface RootRouteChildren {
   ForecastRoute: typeof ForecastRoute
   IncomeRoute: typeof IncomeRoute
   RecurringRoute: typeof RecurringRoute
+  TransactionIdRoute: typeof TransactionIdRoute
   TransactionsRoute: typeof TransactionsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/transaction/$id': {
+      id: '/transaction/$id'
+      path: '/transaction/$id'
+      fullPath: '/transaction/$id'
+      preLoaderRoute: typeof TransactionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/transactions': {
       id: '/transactions'
       path: '/transactions'
@@ -224,8 +244,19 @@ const rootRouteChildren: RootRouteChildren = {
   ForecastRoute: ForecastRoute,
   IncomeRoute: IncomeRoute,
   RecurringRoute: RecurringRoute,
+  TransactionIdRoute: TransactionIdRoute,
   TransactionsRoute: TransactionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

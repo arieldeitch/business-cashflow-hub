@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDownLeft, ArrowUpRight, Check } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
@@ -83,20 +83,26 @@ function Transactions() {
                   key={t.id}
                   className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
                 >
-                  <span
-                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                      t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
-                    }`}
+                  <Link
+                    to="/transaction/$id"
+                    params={{ id: t.id }}
+                    className="flex min-w-0 flex-1 items-center gap-3"
                   >
-                    {t.type === "income" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{t.party}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {fmtDate(t.date)}
-                      {t.category && <span> · {t.category}</span>}
-                    </p>
-                  </div>
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                        t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                      }`}
+                    >
+                      {t.type === "income" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{t.party}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {fmtDate(t.date)}
+                        {t.category && <span> · {t.category}</span>}
+                      </p>
+                    </div>
+                  </Link>
                   <div className="flex flex-col items-end gap-1">
                     <p
                       className={`font-display text-sm font-semibold tabular ${
