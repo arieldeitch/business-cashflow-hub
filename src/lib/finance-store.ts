@@ -23,6 +23,7 @@ export interface Transaction {
   category?: string;
   date: string;
   status: TxStatus;
+  updatedAt?: string;
 }
 
 export interface RecurringExpense {
@@ -286,6 +287,10 @@ export const financeStore = {
     state = { ...state, transactions: state.transactions.filter((t) => t.id !== id) };
     emit();
   },
+  restoreTransaction: (tx: Transaction) => {
+    state = { ...state, transactions: [tx, ...state.transactions] };
+    emit();
+  },
   updateTransaction: (id: string, payload: { party: string; amountBeforeVat: number; vatExempt: boolean; date: string; category?: string }) => {
     const vatRate = payload.vatExempt ? 0 : 0.17;
     const vatAmount = Math.round(payload.amountBeforeVat * vatRate);
@@ -311,6 +316,7 @@ export const financeStore = {
           amountIncludingVat,
           vatExempt: payload.vatExempt,
           amount: amountIncludingVat,
+          updatedAt: new Date().toISOString(),
         };
       }),
     };
@@ -373,6 +379,10 @@ export const financeStore = {
   },
   deleteAuthorityObligation: (id: string) => {
     state = { ...state, authorityObligations: state.authorityObligations.filter((o) => o.id !== id) };
+    emit();
+  },
+  restoreAuthorityObligation: (obl: AuthorityObligation) => {
+    state = { ...state, authorityObligations: [obl, ...state.authorityObligations] };
     emit();
   },
   markAuthorityObligationPaid: (id: string) => {
