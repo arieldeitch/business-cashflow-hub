@@ -477,12 +477,20 @@ function Dashboard() {
             <ul className="space-y-3">
               {upcomingObligations.map((o) => {
                 const days = daysUntil(o.dueDate);
+                const isOverdueDash = days < 0;
+                const isUrgentDash = !isOverdueDash && days <= 7;
+                const dueLabelDash =
+                  days === 0
+                    ? "לתשלום היום"
+                    : days < 0
+                      ? `באיחור ${Math.abs(days)} ימים`
+                      : `לתשלום בעוד ${days} ימים`;
                 return (
                   <li key={o.id} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold">{AUTHORITY_LABELS[o.authority]}</p>
-                      <p className={`text-xs ${days < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                        {labelDaysUntil(days)}
+                      <p className={`text-xs ${isOverdueDash ? "text-destructive" : isUrgentDash ? "text-warning" : "text-muted-foreground"}`}>
+                        {dueLabelDash}
                       </p>
                     </div>
                     <p className="font-display text-sm font-bold tabular text-destructive">

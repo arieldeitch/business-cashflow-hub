@@ -84,17 +84,21 @@ function AuthoritiesScreen() {
   const pending = authorityObligations.filter((o) => o.status === "pending");
   const paid = authorityObligations.filter((o) => o.status === "paid");
   const totalPending = pending.reduce((s, o) => s + o.amount, 0);
+  const overdueCount = pending.filter((o) => daysUntil(o.dueDate) < 0).length;
+  const hasOverdue = overdueCount > 0;
 
   return (
     <AppShell title="התחייבויות לרשויות" subtitle="מע״מ · מס הכנסה · ביטוח לאומי">
       {/* Summary banner */}
       {pending.length > 0 && formMode === "closed" && (
-        <div className="mb-5 flex items-center justify-between rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
-          <div className="flex items-center gap-2 text-warning">
+        <div className={`mb-5 flex items-center justify-between rounded-2xl border px-4 py-3 ${hasOverdue ? "border-destructive/40 bg-destructive/10" : "border-warning/40 bg-warning/10"}`}>
+          <div className={`flex items-center gap-2 ${hasOverdue ? "text-destructive" : "text-warning"}`}>
             <Clock className="h-4 w-4" />
-            <span className="text-sm font-semibold">{pending.length} התחייבויות פעילות</span>
+            <span className="text-sm font-semibold">
+              {hasOverdue ? `${overdueCount} התחייבויות באיחור` : `${pending.length} התחייבויות פעילות`}
+            </span>
           </div>
-          <span className="font-display text-sm font-bold tabular text-warning">
+          <span className={`font-display text-sm font-bold tabular ${hasOverdue ? "text-destructive" : "text-warning"}`}>
             {fmt(totalPending)}
           </span>
         </div>
@@ -219,20 +223,27 @@ function AuthoritiesScreen() {
               .map((o) => {
                 const days = daysUntil(o.dueDate);
                 const isOverdue = days < 0;
+                const isUrgent = !isOverdue && days <= 7;
+                const dueDateLabel =
+                  days === 0
+                    ? "לתשלום היום"
+                    : days < 0
+                      ? `באיחור ${Math.abs(days)} ימים`
+                      : `לתשלום בעוד ${days} ימים`;
                 return (
                   <li
                     key={o.id}
                     className={`flex items-center gap-3 rounded-2xl border bg-surface p-3 ${
-                      isOverdue ? "border-destructive/40" : "border-border"
+                      isOverdue ? "border-destructive/40" : isUrgent ? "border-warning/40" : "border-border"
                     }`}
                   >
-                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${isOverdue ? "bg-destructive/15 text-destructive" : "bg-warning/15 text-warning"}`}>
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${isOverdue ? "bg-destructive/15 text-destructive" : isUrgent ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground"}`}>
                       <Building2 className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{AUTHORITY_LABELS[o.authority]}</p>
-                      <p className={`text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
-                        {fmtDate(o.dueDate)} · {labelDaysUntil(days)}
+                      <p className={`text-xs ${isOverdue ? "text-destructive" : isUrgent ? "text-warning" : "text-muted-foreground"}`}>
+                        {fmtDate(o.dueDate)} · {dueDateLabel}
                       </p>
                       {o.notes && (
                         <p className="mt-0.5 truncate text-[10px] text-muted-foreground/60">{o.notes}</p>
