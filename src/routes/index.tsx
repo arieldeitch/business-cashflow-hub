@@ -542,6 +542,12 @@ function Dashboard() {
             </p>
           </div>
 
+          <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/5 px-4 py-3">
+            <p className="text-[11px] leading-relaxed text-warning/80">
+              המע״מ שנאסף מלקוחות אינו כסף פנוי לשימוש. מומלץ לשמור אותו בצד עד מועד הדיווח.
+            </p>
+          </div>
+
           {vatSummary.vatBalance > 0 && (
             <button
               onClick={createVatObligation}
