@@ -8,6 +8,8 @@ import {
   fmtDate,
   financeStore,
   getCollectionsSummary,
+  daysUntil,
+  labelDaysUntil,
   type Transaction,
   type TxStatus,
 } from "@/lib/finance-store";
@@ -325,6 +327,11 @@ function CollectionsScreen() {
                           {STATUS_LABELS[tx.status]}
                         </span>
                       </div>
+                      {tx.status === "overdue" && (
+                        <p className="mt-0.5 text-[11px] font-semibold text-destructive">
+                          {labelDaysUntil(daysUntil(tx.date))}
+                        </p>
+                      )}
                     </Link>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {tx.status !== "paid" && (
