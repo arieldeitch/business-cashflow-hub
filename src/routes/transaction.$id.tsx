@@ -414,6 +414,9 @@ function ViewMode({ tx, onDelete }: { tx: Transaction; onDelete: () => void }) {
         )}
         <DetailRow label="סה״כ כולל מע״מ" value={fmt(tx.amount)} />
         {tx.category && <DetailRow label="קטגוריה" value={tx.category} />}
+        {tx.paidAt && (
+          <DetailRow label={tx.type === "income" ? "התקבל ב" : "שולם ב"} value={fmtDate(tx.paidAt)} />
+        )}
         {tx.updatedAt && (
           <DetailRow label="נערך לאחרונה" value={fmtDate(tx.updatedAt.slice(0, 10))} />
         )}

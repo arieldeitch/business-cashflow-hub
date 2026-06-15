@@ -24,6 +24,7 @@ export interface Transaction {
   date: string;
   status: TxStatus;
   updatedAt?: string;
+  paidAt?: string;
 }
 
 export interface RecurringExpense {
@@ -280,7 +281,13 @@ export const financeStore = {
     emit();
   },
   markAsPaid: (id: string) => {
-    state = { ...state, transactions: state.transactions.map((t) => t.id === id ? { ...t, status: "paid" } : t) };
+    const today = new Date().toISOString().slice(0, 10);
+    state = {
+      ...state,
+      transactions: state.transactions.map((t) =>
+        t.id === id ? { ...t, status: "paid", paidAt: today } : t
+      ),
+    };
     emit();
   },
   deleteTransaction: (id: string) => {
