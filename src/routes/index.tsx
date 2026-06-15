@@ -94,6 +94,15 @@ function Dashboard() {
     return items;
   }, [projected, collectionsSummary, upcomingObligations]);
 
+  const upcomingTxs = useMemo(
+    () =>
+      transactions
+        .filter((t) => t.status !== "paid")
+        .sort((a, b) => +new Date(a.date) - +new Date(b.date))
+        .slice(0, 4),
+    [transactions]
+  );
+
   const createVatObligation = () => {
     const existingVat = financeStore.get().authorityObligations.find(
       (o) => o.authority === "vat" && o.status === "pending"
@@ -308,13 +317,13 @@ function Dashboard() {
       <section className="mt-5 grid grid-cols-2 gap-3">
         <StatCard
           label="הכנסות צפויות"
-          sub="30 ימים הקרובים"
+          sub={expectedIncome === 0 ? "אין עדיין הכנסות להצגה" : "30 ימים הקרובים"}
           amount={expectedIncome}
           tone="success"
         />
         <StatCard
           label="הוצאות צפויות"
-          sub="30 ימים הקרובים"
+          sub={expectedExpenses === 0 ? "אין עדיין הוצאות להצגה" : "30 ימים הקרובים"}
           amount={expectedExpenses}
           tone="destructive"
         />
@@ -350,12 +359,14 @@ function Dashboard() {
             הצג הכל
           </Link>
         </div>
-        <ul className="mt-3 space-y-2">
-          {transactions
-            .filter((t) => t.status !== "paid")
-            .sort((a, b) => +new Date(a.date) - +new Date(b.date))
-            .slice(0, 4)
-            .map((t) => (
+        {upcomingTxs.length === 0 ? (
+          <div className="mt-3 rounded-2xl border border-border bg-surface p-5 text-center">
+            <p className="text-sm text-muted-foreground">אין עדיין פעולות ממתינות</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">הוסף הכנסה או הוצאה כדי לעקוב אחר הפעילות הקרובה</p>
+          </div>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {upcomingTxs.map((t) => (
               <li
                 key={t.id}
                 className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
@@ -383,7 +394,8 @@ function Dashboard() {
                 </p>
               </li>
             ))}
-        </ul>
+          </ul>
+        )}
       </section>
 
       {/* Collections card */}
@@ -401,7 +413,8 @@ function Dashboard() {
           {collectionsSummary.openReceivablesCount === 0 ? (
             <div className="flex flex-col items-center gap-2 py-2 text-center">
               <Banknote className="h-6 w-6 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">אין חובות פתוחים</p>
+              <p className="text-sm text-muted-foreground">אין כרגע גביות פתוחות</p>
+              <p className="text-xs text-muted-foreground/60">הוסף גביה מלקוח כדי לעקוב אחר תשלומים</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -457,7 +470,8 @@ function Dashboard() {
           {upcomingObligations.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-2 text-center">
               <Building2 className="h-6 w-6 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">אין התחייבויות פעילות</p>
+              <p className="text-sm text-muted-foreground">אין כרגע התחייבויות לרשויות</p>
+              <p className="text-xs text-muted-foreground/60">הוסף תשלום למע״מ, מס הכנסה או ביטוח לאומי</p>
             </div>
           ) : (
             <ul className="space-y-3">
