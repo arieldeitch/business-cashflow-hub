@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, type ReactNode } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { ArrowDownLeft, CheckCircle2, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -11,6 +11,8 @@ import {
   type Transaction,
   type TxStatus,
 } from "@/lib/finance-store";
+
+const UNDO_SECONDS = 10;
 
 export const Route = createFileRoute("/collections")({
   head: () => ({ meta: [{ title: "גבייה — Cashflow OS" }] }),
@@ -52,6 +54,24 @@ function CollectionsScreen() {
   const [vatExempt, setVatExempt] = useState(false);
   const [date, setDate] = useState("");
 
+  // Delete + undo state
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deletedTx, setDeletedTx] = useState<Transaction | null>(null);
+  const [undoCountdown, setUndoCountdown] = useState(UNDO_SECONDS);
+
+  useEffect(() => {
+    if (!deletedTx) return;
+    setUndoCountdown(UNDO_SECONDS);
+    const timer = setInterval(() => {
+      setUndoCountdown((prev) => {
+        if (prev <= 1) { clearInterval(timer); setDeletedTx(null); return UNDO_SECONDS; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [deletedTx]);
+
   const summary = useMemo(() => getCollectionsSummary(transactions), [transactions]);
 
   const filtered = useMemo(() => {
@@ -92,10 +112,23 @@ function CollectionsScreen() {
     closeForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("למחוק את ההכנסה?")) {
-      financeStore.deleteTransaction(id);
-    }
+  const requestDelete = (id: string) => {
+    setPendingDeleteId(id);
+    setDeleteStep(1);
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDeleteId) return;
+    const snapshot = financeStore.get().transactions.find((t) => t.id === pendingDeleteId) ?? null;
+    financeStore.deleteTransaction(pendingDeleteId);
+    setPendingDeleteId(null);
+    setDeletedTx(snapshot);
+  };
+
+  const handleUndo = () => {
+    if (!deletedTx) return;
+    financeStore.restoreTransaction(deletedTx);
+    setDeletedTx(null);
   };
 
   const amountBeforeVat = Number(amount) || 0;
@@ -114,6 +147,7 @@ function CollectionsScreen() {
   }
 
   return (
+    <>
     <AppShell title="גבייה" subtitle="מעקב הכנסות">
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3">
@@ -262,7 +296,9 @@ function CollectionsScreen() {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <span
+                  <Link
+                    to="/transaction/$id"
+                    params={{ id: tx.id }}
                     className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
                       tx.status === "paid"
                         ? "bg-success/15 text-success"
@@ -272,22 +308,24 @@ function CollectionsScreen() {
                     }`}
                   >
                     <ArrowDownLeft className="h-5 w-5" />
-                  </span>
+                  </Link>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold">{tx.party}</p>
-                      <p className="shrink-0 font-display text-sm font-bold tabular text-success">
-                        +{fmt(tx.amount)}
-                      </p>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">{fmtDate(tx.date)}</p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[tx.status]}`}
-                      >
-                        {STATUS_LABELS[tx.status]}
-                      </span>
-                    </div>
+                    <Link to="/transaction/$id" params={{ id: tx.id }} className="block">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-semibold">{tx.party}</p>
+                        <p className="shrink-0 font-display text-sm font-bold tabular text-success">
+                          +{fmt(tx.amount)}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">{fmtDate(tx.date)}</p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[tx.status]}`}
+                        >
+                          {STATUS_LABELS[tx.status]}
+                        </span>
+                      </div>
+                    </Link>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {tx.status !== "paid" && (
                         <button
@@ -306,7 +344,7 @@ function CollectionsScreen() {
                         ערוך
                       </button>
                       <button
-                        onClick={() => handleDelete(tx.id)}
+                        onClick={() => requestDelete(tx.id)}
                         className="flex items-center gap-1 rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:border-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-2.5 w-2.5" />
@@ -320,7 +358,77 @@ function CollectionsScreen() {
           </ul>
         )}
       </section>
+
+      {/* Undo snackbar */}
+      {deletedTx && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-50 flex justify-center px-5">
+          <div className="pointer-events-auto flex w-full max-w-[440px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface-elevated px-4 py-3 shadow-lg">
+            <p className="text-sm font-medium">
+              גביה נמחקה · {deletedTx.party}
+            </p>
+            <button
+              onClick={handleUndo}
+              className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+            >
+              בטל ({undoCountdown})
+            </button>
+          </div>
+        </div>
+      )}
     </AppShell>
+
+    {/* Step 1: first confirmation */}
+    {pendingDeleteId && deleteStep === 1 && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6">
+        <div className="w-full max-w-[480px] rounded-3xl border border-border bg-surface p-6">
+          <p className="text-center text-base font-semibold">האם למחוק גביה זו?</p>
+          <div className="mt-5 flex gap-3">
+            <button
+              onClick={() => setPendingDeleteId(null)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground transition active:scale-[0.98]"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={() => setDeleteStep(2)}
+              className="flex-1 rounded-xl border border-destructive/40 bg-destructive/10 py-3 text-sm font-semibold text-destructive transition active:scale-[0.98]"
+            >
+              כן, מחק
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Step 2: final confirmation */}
+    {pendingDeleteId && deleteStep === 2 && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6">
+        <div className="w-full max-w-[480px] rounded-3xl border border-destructive/40 bg-surface p-6">
+          <div className="flex justify-center">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-destructive/10">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </span>
+          </div>
+          <p className="mt-4 text-center text-base font-semibold">אישור סופי למחיקה</p>
+          <p className="mt-1 text-center text-xs text-muted-foreground">ניתן לשחזר תוך 10 שניות</p>
+          <div className="mt-5 flex gap-3">
+            <button
+              onClick={() => setPendingDeleteId(null)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground transition active:scale-[0.98]"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="flex-1 rounded-xl bg-destructive py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+            >
+              מחק סופית
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

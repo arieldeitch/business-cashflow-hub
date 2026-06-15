@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Building2, CheckCircle2, Pencil, Trash2, Plus, Clock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -44,6 +44,24 @@ function AuthoritiesScreen() {
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [notes, setNotes] = useState("");
 
+  // Delete + undo state
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deletedObl, setDeletedObl] = useState<AuthorityObligation | null>(null);
+  const [undoCountdown, setUndoCountdown] = useState(10);
+
+  useEffect(() => {
+    if (!deletedObl) return;
+    setUndoCountdown(10);
+    const timer = setInterval(() => {
+      setUndoCountdown((prev) => {
+        if (prev <= 1) { clearInterval(timer); setDeletedObl(null); return 10; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [deletedObl]);
+
   const openAdd = () => {
     setAuthority("vat");
     setAmount("");
@@ -75,10 +93,23 @@ function AuthoritiesScreen() {
     closeForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("למחוק את ההתחייבות?")) {
-      financeStore.deleteAuthorityObligation(id);
-    }
+  const requestDelete = (id: string) => {
+    setPendingDeleteId(id);
+    setDeleteStep(1);
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDeleteId) return;
+    const snapshot = financeStore.get().authorityObligations.find((o) => o.id === pendingDeleteId) ?? null;
+    financeStore.deleteAuthorityObligation(pendingDeleteId);
+    setPendingDeleteId(null);
+    setDeletedObl(snapshot);
+  };
+
+  const handleUndo = () => {
+    if (!deletedObl) return;
+    financeStore.restoreAuthorityObligation(deletedObl);
+    setDeletedObl(null);
   };
 
   const pending = authorityObligations.filter((o) => o.status === "pending");
@@ -88,6 +119,7 @@ function AuthoritiesScreen() {
   const hasOverdue = overdueCount > 0;
 
   return (
+    <>
     <AppShell title="התחייבויות לרשויות" subtitle="מע״מ · מס הכנסה · ביטוח לאומי">
       {/* Summary banner */}
       {pending.length > 0 && formMode === "closed" && (
@@ -269,7 +301,7 @@ function AuthoritiesScreen() {
                           ערוך
                         </button>
                         <button
-                          onClick={() => handleDelete(o.id)}
+                          onClick={() => requestDelete(o.id)}
                           className="flex items-center gap-1 rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:border-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-2.5 w-2.5" />
@@ -310,7 +342,7 @@ function AuthoritiesScreen() {
                       {fmt(o.amount)}
                     </p>
                     <button
-                      onClick={() => handleDelete(o.id)}
+                      onClick={() => requestDelete(o.id)}
                       className="flex items-center gap-1 rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:border-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-2.5 w-2.5" />
@@ -322,7 +354,77 @@ function AuthoritiesScreen() {
           </ul>
         </section>
       )}
+
+      {/* Undo snackbar */}
+      {deletedObl && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-50 flex justify-center px-5">
+          <div className="pointer-events-auto flex w-full max-w-[440px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface-elevated px-4 py-3 shadow-lg">
+            <p className="text-sm font-medium">
+              התחייבות נמחקה · {AUTHORITY_LABELS[deletedObl.authority]}
+            </p>
+            <button
+              onClick={handleUndo}
+              className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+            >
+              בטל ({undoCountdown})
+            </button>
+          </div>
+        </div>
+      )}
     </AppShell>
+
+    {/* Step 1: first confirmation */}
+    {pendingDeleteId && deleteStep === 1 && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6">
+        <div className="w-full max-w-[480px] rounded-3xl border border-border bg-surface p-6">
+          <p className="text-center text-base font-semibold">האם למחוק פעולה זו?</p>
+          <div className="mt-5 flex gap-3">
+            <button
+              onClick={() => setPendingDeleteId(null)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground transition active:scale-[0.98]"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={() => setDeleteStep(2)}
+              className="flex-1 rounded-xl border border-destructive/40 bg-destructive/10 py-3 text-sm font-semibold text-destructive transition active:scale-[0.98]"
+            >
+              כן, מחק
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Step 2: final confirmation */}
+    {pendingDeleteId && deleteStep === 2 && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6">
+        <div className="w-full max-w-[480px] rounded-3xl border border-destructive/40 bg-surface p-6">
+          <div className="flex justify-center">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-destructive/10">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </span>
+          </div>
+          <p className="mt-4 text-center text-base font-semibold">אישור סופי למחיקה</p>
+          <p className="mt-1 text-center text-xs text-muted-foreground">ניתן לשחזר תוך 10 שניות</p>
+          <div className="mt-5 flex gap-3">
+            <button
+              onClick={() => setPendingDeleteId(null)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground transition active:scale-[0.98]"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="flex-1 rounded-xl bg-destructive py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+            >
+              מחק סופית
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
