@@ -313,20 +313,39 @@ function Dashboard() {
         </Link>
       </section>
 
-      {/* 30 day cards */}
-      <section className="mt-5 grid grid-cols-2 gap-3">
-        <StatCard
-          label="הכנסות צפויות"
-          sub={expectedIncome === 0 ? "אין עדיין הכנסות להצגה" : "30 ימים הקרובים"}
-          amount={expectedIncome}
-          tone="success"
-        />
-        <StatCard
-          label="הוצאות צפויות"
-          sub={expectedExpenses === 0 ? "אין עדיין הוצאות להצגה" : "30 ימים הקרובים"}
-          amount={expectedExpenses}
-          tone="destructive"
-        />
+      {/* Forecast breakdown card */}
+      <section className="mt-5">
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            תחזית 30 יום
+          </p>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">יתרה נוכחית</p>
+              <p className="font-display text-sm font-semibold tabular">
+                {hidden ? "••••" : fmt(balance)}
+              </p>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">הכנסות צפויות</p>
+              <p className="font-display text-sm font-semibold tabular text-success">
+                {hidden ? "••••" : expectedIncome === 0 ? "—" : `+${fmt(expectedIncome)}`}
+              </p>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">הוצאות צפויות</p>
+              <p className="font-display text-sm font-semibold tabular">
+                {hidden ? "••••" : expectedExpenses === 0 ? "—" : `−${fmt(expectedExpenses)}`}
+              </p>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-2.5">
+              <p className="text-sm font-semibold">יתרה חזויה</p>
+              <p className={`font-display text-base font-bold tabular ${projected >= 0 ? "text-success" : "text-destructive"}`}>
+                {hidden ? "••••" : fmt(projected)}
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Overdue alert */}
