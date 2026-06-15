@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, type ReactNode } from "react";
 import {
   ChevronRight,
+  Copy,
   Pencil,
   Trash2,
   ArrowDownLeft,
@@ -116,6 +117,33 @@ function TransactionDetail() {
     setUndoCountdown(10);
   };
 
+  const handleDuplicate = () => {
+    if (!tx) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (tx.type === "income") {
+      navigate({
+        to: "/income",
+        search: {
+          party: tx.party,
+          amount: String(tx.amountBeforeVat),
+          vatExempt: tx.vatExempt ? "true" : "false",
+          date: today,
+        },
+      });
+    } else {
+      navigate({
+        to: "/expense",
+        search: {
+          party: tx.party,
+          amount: String(tx.amountBeforeVat),
+          vatExempt: tx.vatExempt ? "true" : "false",
+          date: today,
+          category: tx.category,
+        },
+      });
+    }
+  };
+
   // Deleted state — undo window
   if (deletedTx) {
     return (
@@ -191,7 +219,7 @@ function TransactionDetail() {
         }
       >
         {mode === "view" ? (
-          <ViewMode tx={tx!} onDelete={() => setDeleteStep(1)} />
+          <ViewMode tx={tx!} onDelete={() => setDeleteStep(1)} onDuplicate={handleDuplicate} />
         ) : (
           <form onSubmit={saveEdit} className="space-y-3">
             {/* Amount hero */}
@@ -359,7 +387,15 @@ function TransactionDetail() {
   );
 }
 
-function ViewMode({ tx, onDelete }: { tx: Transaction; onDelete: () => void }) {
+function ViewMode({
+  tx,
+  onDelete,
+  onDuplicate,
+}: {
+  tx: Transaction;
+  onDelete: () => void;
+  onDuplicate: () => void;
+}) {
   const isIncome = tx.type === "income";
   const statusLabels: Record<string, string> = {
     paid: isIncome ? "התקבל" : "שולם",
@@ -432,6 +468,15 @@ function ViewMode({ tx, onDelete }: { tx: Transaction; onDelete: () => void }) {
           {isIncome ? "סמן כהתקבל" : "סמן כשולם"}
         </button>
       )}
+
+      <button
+        type="button"
+        onClick={onDuplicate}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-surface py-3 text-sm font-semibold transition active:scale-[0.98]"
+      >
+        <Copy className="h-4 w-4" />
+        שכפל
+      </button>
 
       <button
         onClick={onDelete}

@@ -1,8 +1,17 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { financeStore, fmt, type TxType } from "@/lib/finance-store";
+import { getSuggestions, saveSuggestion } from "@/lib/suggestions";
+
+export interface InitialValues {
+  party?: string;
+  amount?: string;
+  vatExempt?: string;
+  date?: string;
+  category?: string;
+}
 
 interface Props {
   type: TxType;
@@ -11,22 +20,45 @@ interface Props {
   categories?: string[];
   accentClass: string;
   title: string;
+  initialValues?: InitialValues;
 }
 
 const VAT_RATE = 0.17;
 
-export function TxForm({ type, partyLabel, dateLabel, categories, accentClass, title }: Props) {
+function nextWeek() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
+}
+
+export function TxForm({
+  type,
+  partyLabel,
+  dateLabel,
+  categories,
+  accentClass,
+  title,
+  initialValues,
+}: Props) {
   const navigate = useNavigate();
-  const [amount, setAmount] = useState("");
-  const [vatExempt, setVatExempt] = useState(false);
-  const [party, setParty] = useState("");
-  const [category, setCategory] = useState(categories?.[0] ?? "");
-  const [date, setDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().slice(0, 10);
-  });
-  const [saved, setSaved] = useState(false);
+  const [amount, setAmount] = useState(initialValues?.amount ?? "");
+  const [vatExempt, setVatExempt] = useState(initialValues?.vatExempt === "true");
+  const [party, setParty] = useState(initialValues?.party ?? "");
+  const [category, setCategory] = useState(
+    initialValues?.category ?? categories?.[0] ?? ""
+  );
+  const [date, setDate] = useState(initialValues?.date ?? nextWeek());
+  const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
+  const [suggestion, setSuggestion] = useState<{
+    party: string;
+    category: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const s = getSuggestions();
+    const entry = type === "income" ? s.income : s.expense;
+    if (entry.party) setSuggestion(entry);
+  }, [type]);
 
   const amountBeforeVat = Number(amount) || 0;
   const vatAmount = vatExempt ? 0 : Math.round(amountBeforeVat * VAT_RATE);
@@ -43,8 +75,15 @@ export function TxForm({ type, partyLabel, dateLabel, categories, accentClass, t
       category: categories ? category : undefined,
       date,
     });
-    setSaved(true);
-    setTimeout(() => navigate({ to: "/transactions" }), 600);
+    saveSuggestion(type, party, categories ? category : undefined);
+    setSaveState("saved");
+  };
+
+  const resetForm = () => {
+    setAmount("");
+    setParty("");
+    setDate(nextWeek());
+    setSaveState("idle");
   };
 
   return (
@@ -67,7 +106,9 @@ export function TxForm({ type, partyLabel, dateLabel, categories, accentClass, t
 
         <form onSubmit={submit} className="flex flex-1 flex-col px-5 pb-10 pt-4">
           {/* Amount hero */}
-          <div className={`rounded-3xl border border-border bg-surface p-6 text-center ${accentClass}`}>
+          <div
+            className={`rounded-3xl border border-border bg-surface p-6 text-center ${accentClass}`}
+          >
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
               סכום לפני מע״מ
             </p>
@@ -83,7 +124,6 @@ export function TxForm({ type, partyLabel, dateLabel, categories, accentClass, t
               <span className="font-display text-3xl text-muted-foreground">₪</span>
             </div>
 
-            {/* VAT breakdown */}
             {amountBeforeVat > 0 && (
               <div className="mt-4 space-y-1 border-t border-border/40 pt-3 text-sm">
                 {!vatExempt && (
@@ -130,6 +170,24 @@ export function TxForm({ type, partyLabel, dateLabel, categories, accentClass, t
               />
             </Field>
 
+            {/* Last-used suggestion chip */}
+            {!party && suggestion?.party && saveState === "idle" && (
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-xs text-muted-foreground">אחרון:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!suggestion) return;
+                    setParty(suggestion.party);
+                    if (suggestion.category && categories) setCategory(suggestion.category);
+                  }}
+                  className="rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs font-medium transition active:scale-95"
+                >
+                  {suggestion.party}
+                </button>
+              </div>
+            )}
+
             {categories && (
               <Field label="קטגוריה">
                 <div className="-mx-1 flex flex-wrap gap-2">
@@ -162,25 +220,40 @@ export function TxForm({ type, partyLabel, dateLabel, categories, accentClass, t
           </div>
 
           <div className="mt-auto pt-8">
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-primary py-4 font-display text-base font-semibold text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.82_0.16_162/0.4)] transition active:scale-[0.98] disabled:opacity-40"
-              disabled={!amount || !party}
-            >
-              {type === "income" ? "שמור הכנסה" : "שמור הוצאה"}
-            </button>
+            {saveState === "saved" ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-success/30 bg-success/10 p-4 text-center">
+                  <p className="text-sm font-semibold text-success">✓ נשמר בהצלחה</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="flex-1 rounded-2xl border border-border bg-surface py-3 text-sm font-semibold transition active:scale-[0.98]"
+                  >
+                    הוסף עוד
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/transactions" })}
+                    className="flex-1 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition active:scale-[0.98]"
+                  >
+                    סיים
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-primary py-4 font-display text-base font-semibold text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.82_0.16_162/0.4)] transition active:scale-[0.98] disabled:opacity-40"
+                disabled={!amount || !party}
+              >
+                {type === "income" ? "שמור הכנסה" : "שמור הוצאה"}
+              </button>
+            )}
           </div>
         </form>
       </div>
-
-      {/* Success toast */}
-      {saved && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center">
-          <div className="rounded-2xl bg-success px-6 py-3 text-sm font-semibold text-white shadow-lg">
-            ✓ נשמר בהצלחה
-          </div>
-        </div>
-      )}
     </div>
   );
 }
