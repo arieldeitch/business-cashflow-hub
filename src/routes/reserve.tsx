@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Shield, Plus, ChevronLeft, CheckCircle2, Circle, FileText, Banknote, StickyNote, Trash2 } from "lucide-react";
+import { Shield, Plus, ChevronRight, ChevronLeft, CheckCircle2, Circle, FileText, Banknote, StickyNote, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -10,6 +10,7 @@ import {
   type DocType,
   type CompensationStatus,
   type AddPeriodPayload,
+  type ReservePeriod,
 } from "@/lib/reserve-store";
 import { fmtDate, fmt } from "@/lib/finance-store";
 
@@ -34,7 +35,7 @@ function ReservePage() {
             to="/"
             className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface text-muted-foreground"
           >
-            <ChevronLeft className="h-4 w-4" style={{ transform: "rotate(180deg)" }} />
+            <ChevronRight className="h-4 w-4" />
           </Link>
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
@@ -55,6 +56,7 @@ function ReservePage() {
 
       {!showForm && periods.length > 0 && (
         <div className="space-y-4">
+          <CompensationSummaryCard periods={periods} />
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{periods.length} תקופות שירות</p>
             <button
@@ -83,8 +85,8 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         <Shield className="h-8 w-8" />
       </div>
       <h2 className="font-display text-lg font-semibold">לא הוגדרו נתוני מילואים</h2>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        עקוב אחר תקופות שירות, מסמכים ופיצויים
+      <p className="mt-1.5 max-w-[240px] text-sm text-muted-foreground">
+        נהל תקופות שירות מילואים, מסמכים ותשלומים צפויים במקום אחד.
       </p>
       <button
         onClick={onAdd}
@@ -93,6 +95,55 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         <Plus className="h-4 w-4" />
         צור תקופת שירות
       </button>
+    </div>
+  );
+}
+
+// ─── Compensation summary card ─────────────────────────────────────────────────
+
+function CompensationSummaryCard({ periods }: { periods: ReservePeriod[] }) {
+  const totalAmount = periods.reduce((sum, p) => sum + p.compensation.estimatedAmount, 0);
+
+  const statusPriority: Record<CompensationStatus, number> = {
+    paid: 0,
+    approved: 1,
+    submitted: 2,
+    pending: 3,
+  };
+  const dominantStatus = periods.reduce<CompensationStatus>((worst, p) => {
+    return statusPriority[p.compensation.status] > statusPriority[worst]
+      ? p.compensation.status
+      : worst;
+  }, "paid");
+
+  const statusColors: Record<CompensationStatus, string> = {
+    pending: "bg-muted/60 text-muted-foreground",
+    submitted: "bg-warning/15 text-warning",
+    approved: "bg-primary/15 text-primary",
+    paid: "bg-success/15 text-success",
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        סיכום פיצויים
+      </p>
+      {totalAmount > 0 ? (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">פיצוי צפוי</p>
+            <p className="mt-0.5 font-display text-2xl font-bold tabular">{fmt(totalAmount)}</p>
+          </div>
+          <div className="text-end">
+            <p className="text-xs text-muted-foreground">סטטוס</p>
+            <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[dominantStatus]}`}>
+              {COMPENSATION_STATUS_LABELS[dominantStatus]}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">לא הוגדר פיצוי צפוי</p>
+      )}
     </div>
   );
 }
@@ -111,13 +162,6 @@ function PeriodCard({ periodId }: { periodId: string }) {
 
   const docsReceived = period.documents.filter((d) => d.received).length;
   const docsMissing = period.documents.length - docsReceived;
-
-  const compensationColor: Record<CompensationStatus, string> = {
-    pending: "text-muted-foreground",
-    submitted: "text-warning",
-    approved: "text-primary",
-    paid: "text-success",
-  };
 
   return (
     <div className="rounded-2xl border border-border bg-surface overflow-hidden">

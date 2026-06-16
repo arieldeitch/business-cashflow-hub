@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TransactionIdRouteImport } from './routes/transaction.$id'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as ReserveRouteImport } from './routes/reserve'
 import { Route as RecurringRouteImport } from './routes/recurring'
@@ -20,12 +19,8 @@ import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AuthoritiesRouteImport } from './routes/authorities'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TransactionIdRouteImport } from './routes/transaction.$id'
 
-const TransactionIdRoute = TransactionIdRouteImport.update({
-  id: '/transaction/$id',
-  path: '/transaction/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
@@ -76,6 +71,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransactionIdRoute = TransactionIdRouteImport.update({
+  id: '/transaction/$id',
+  path: '/transaction/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,8 +87,8 @@ export interface FileRoutesByFullPath {
   '/income': typeof IncomeRoute
   '/recurring': typeof RecurringRoute
   '/reserve': typeof ReserveRoute
-  '/transaction/$id': typeof TransactionIdRoute
   '/transactions': typeof TransactionsRoute
+  '/transaction/$id': typeof TransactionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -100,8 +100,8 @@ export interface FileRoutesByTo {
   '/income': typeof IncomeRoute
   '/recurring': typeof RecurringRoute
   '/reserve': typeof ReserveRoute
-  '/transaction/$id': typeof TransactionIdRoute
   '/transactions': typeof TransactionsRoute
+  '/transaction/$id': typeof TransactionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,8 +114,8 @@ export interface FileRoutesById {
   '/income': typeof IncomeRoute
   '/recurring': typeof RecurringRoute
   '/reserve': typeof ReserveRoute
-  '/transaction/$id': typeof TransactionIdRoute
   '/transactions': typeof TransactionsRoute
+  '/transaction/$id': typeof TransactionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,8 +129,8 @@ export interface FileRouteTypes {
     | '/income'
     | '/recurring'
     | '/reserve'
-    | '/transaction/$id'
     | '/transactions'
+    | '/transaction/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,8 +142,8 @@ export interface FileRouteTypes {
     | '/income'
     | '/recurring'
     | '/reserve'
-    | '/transaction/$id'
     | '/transactions'
+    | '/transaction/$id'
   id:
     | '__root__'
     | '/'
@@ -155,8 +155,8 @@ export interface FileRouteTypes {
     | '/income'
     | '/recurring'
     | '/reserve'
-    | '/transaction/$id'
     | '/transactions'
+    | '/transaction/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -169,19 +169,12 @@ export interface RootRouteChildren {
   IncomeRoute: typeof IncomeRoute
   RecurringRoute: typeof RecurringRoute
   ReserveRoute: typeof ReserveRoute
-  TransactionIdRoute: typeof TransactionIdRoute
   TransactionsRoute: typeof TransactionsRoute
+  TransactionIdRoute: typeof TransactionIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/transaction/$id': {
-      id: '/transaction/$id'
-      path: '/transaction/$id'
-      fullPath: '/transaction/$id'
-      preLoaderRoute: typeof TransactionIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/transactions': {
       id: '/transactions'
       path: '/transactions'
@@ -252,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transaction/$id': {
+      id: '/transaction/$id'
+      path: '/transaction/$id'
+      fullPath: '/transaction/$id'
+      preLoaderRoute: typeof TransactionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -265,8 +265,8 @@ const rootRouteChildren: RootRouteChildren = {
   IncomeRoute: IncomeRoute,
   RecurringRoute: RecurringRoute,
   ReserveRoute: ReserveRoute,
-  TransactionIdRoute: TransactionIdRoute,
   TransactionsRoute: TransactionsRoute,
+  TransactionIdRoute: TransactionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
