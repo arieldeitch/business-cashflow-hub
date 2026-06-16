@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Shield, Plus, ChevronRight, ChevronLeft, CheckCircle2, Circle, FileText, Banknote, StickyNote, Trash2 } from "lucide-react";
+import { Shield, Plus, ChevronRight, ChevronLeft, CheckCircle2, Circle, FileText, Banknote, StickyNote, Trash2, CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useReserve,
   reserveStore,
@@ -12,7 +14,7 @@ import {
   type AddPeriodPayload,
   type ReservePeriod,
 } from "@/lib/reserve-store";
-import { fmtDate, fmt } from "@/lib/finance-store";
+import { fmtDate, fmt, localISO } from "@/lib/finance-store";
 
 export const Route = createFileRoute("/reserve")({
   head: () => ({
@@ -401,6 +403,61 @@ function CompensationStatusSelect({
   );
 }
 
+// ─── Date picker field ────────────────────────────────────────────────────────
+
+function DatePickerField({
+  label,
+  value,
+  onChange,
+  placeholder = "בחר תאריך",
+}: {
+  label: string;
+  value: string;
+  onChange: (iso: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  // Parse ISO string as local date to avoid UTC offset shifting the day
+  const selected = value
+    ? (() => {
+        const [y, m, d] = value.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      })()
+    : undefined;
+
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-muted-foreground">{label}</label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm transition hover:border-primary/60 focus:outline-none focus:border-primary/60"
+          >
+            <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className={value ? "text-foreground" : "text-muted-foreground/60"}>
+              {value ? fmtDate(value) : placeholder}
+            </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={(date) => {
+              if (date) {
+                onChange(localISO(date));
+                setOpen(false);
+              }
+            }}
+            autoFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 // ─── Add period form ──────────────────────────────────────────────────────────
 
 function AddPeriodForm({ onClose }: { onClose: () => void }) {
@@ -447,24 +504,16 @@ function AddPeriodForm({ onClose }: { onClose: () => void }) {
 
       {/* Date range */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">תחילת שירות</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/60"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">סיום שירות</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/60"
-          />
-        </div>
+        <DatePickerField
+          label="תחילת שירות"
+          value={startDate}
+          onChange={setStartDate}
+        />
+        <DatePickerField
+          label="סיום שירות"
+          value={endDate}
+          onChange={setEndDate}
+        />
       </div>
 
       {days > 0 && (
@@ -484,15 +533,12 @@ function AddPeriodForm({ onClose }: { onClose: () => void }) {
         />
       </div>
 
-      <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">תאריך תשלום צפוי</label>
-        <input
-          type="date"
-          value={expectedPaymentDate}
-          onChange={(e) => setExpectedPaymentDate(e.target.value)}
-          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/60"
-        />
-      </div>
+      <DatePickerField
+        label="תאריך תשלום צפוי"
+        value={expectedPaymentDate}
+        onChange={setExpectedPaymentDate}
+        placeholder="בחר תאריך (אופציונלי)"
+      />
 
       {/* Notes */}
       <div>
