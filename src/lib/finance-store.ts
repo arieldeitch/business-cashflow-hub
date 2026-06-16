@@ -174,42 +174,50 @@ const addDays = (n: number) => {
 
 function buildSeedTransactions(): Transaction[] {
   return [
-    { id: "t1",  type: "income",  party: "Wix",           date: addDays(-12), status: "paid",    ...vatFields(15000, false) },
-    { id: "t2",  type: "income",  party: "Monday.com",     date: addDays(-3),  status: "paid",    ...vatFields(8000,  false) },
-    { id: "t3",  type: "income",  party: "לקוח פרטי",      date: addDays(4),   status: "pending", ...vatFields(12000, false) },
-    { id: "t4",  type: "income",  party: "סוכנות דיגיטל",  date: addDays(11),  status: "pending", ...vatFields(6500,  false) },
-    { id: "t5",  type: "income",  party: "Monday.com",     date: addDays(22),  status: "pending", ...vatFields(18000, false) },
-    { id: "t6",  type: "income",  party: "לקוח פרטי",      date: addDays(-6),  status: "overdue", ...vatFields(3500,  false) },
-    { id: "t7",  type: "expense", party: "Adobe",           category: "תוכנה",  date: addDays(7),  status: "pending", ...vatFields(1000,  false) },
-    { id: "t8",  type: "expense", party: "רואה חשבון",     category: "ייעוץ",  date: addDays(14), status: "pending", ...vatFields(2500,  false) },
-    { id: "t9",  type: "expense", party: "פלאפון",          category: "תקשורת", date: addDays(-1), status: "overdue", ...vatFields(800,   false) },
-    { id: "t10", type: "expense", party: "Figma",           category: "תוכנה",  date: addDays(18), status: "pending", ...vatFields(1500,  false) },
-    { id: "t11", type: "expense", party: "בזק",             category: "תקשורת", date: addDays(-9), status: "paid",    ...vatFields(600,   false) },
+    // ── Paid income ──
+    { id: "t1",  type: "income",  party: "תיכון רבין מודיעין",      category: "סדנאות", date: addDays(-14), status: "paid",    ...vatFields(12000, false) },
+    { id: "t2",  type: "income",  party: "משפחת כהן",               category: "קבלנות", date: addDays(-5),  status: "paid",    ...vatFields(10000, false) },
+    // ── Expected income ──
+    { id: "t3",  type: "income",  party: "בית ספר הרצל ירושלים",    category: "סדנאות", date: addDays(8),   status: "pending", ...vatFields(8500,  false) },
+    { id: "t4",  type: "income",  party: "משפחת לוי",               category: "קבלנות", date: addDays(13),  status: "pending", ...vatFields(14500, false) },
+    { id: "t5",  type: "income",  party: "בית ספר נופי הסלע",       category: "סדנאות", date: addDays(22),  status: "pending", ...vatFields(9200,  false) },
+    // ── Overdue income (remaining balance from partial payment) ──
+    { id: "t6",  type: "income",  party: "משפחת כהן",               category: "קבלנות", date: addDays(-4),  status: "overdue", ...vatFields(8000,  false) },
+    // ── Paid expenses ──
+    { id: "t7",  type: "expense", party: "מחסן העצים ירושלים",      category: "חומרים", date: addDays(-10), status: "paid",    ...vatFields(3200,  false) },
+    { id: "t8",  type: "expense", party: "בזק",                     category: "תקשורת", date: addDays(-8),  status: "paid",    ...vatFields(99,    false) },
+    // ── Upcoming expenses ──
+    { id: "t9",  type: "expense", party: "אייס",                    category: "חומרים", date: addDays(5),   status: "pending", ...vatFields(850,   false) },
+    { id: "t10", type: "expense", party: "הום סנטר",                category: "חומרים", date: addDays(5),   status: "pending", ...vatFields(620,   false) },
+    { id: "t11", type: "expense", party: "שירביט ביטוח",            category: "ביטוח",  date: addDays(9),   status: "pending", ...vatFields(450,   false) },
+    { id: "t12", type: "expense", party: "רואה חשבון",              category: "ייעוץ",  date: addDays(12),  status: "pending", ...vatFields(700,   false) },
+    { id: "t13", type: "expense", party: "סונול",                   category: "רכב",    date: addDays(-2),  status: "overdue", ...vatFields(1200,  false) },
   ];
 }
 
 function buildSeedRecurring(): RecurringExpense[] {
   return [
-    { id: "r1", name: "שכירות משרד", category: "שכירות", frequency: "monthly",   nextDueDate: addDays(3),  ...vatFields(5000, false) },
-    { id: "r2", name: "רואה חשבון",  category: "ייעוץ",  frequency: "monthly",   nextDueDate: addDays(17), ...vatFields(2500, false) },
-    { id: "r3", name: "אינטרנט",      category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(8),  ...vatFields(300,  false) },
-    { id: "r4", name: "ביטוח עסק",   category: "ביטוח",  frequency: "quarterly", nextDueDate: addDays(26), ...vatFields(1200, false) },
+    { id: "r1", name: "רואה חשבון",  category: "ייעוץ",  frequency: "monthly",   nextDueDate: addDays(12), ...vatFields(700,  false) },
+    { id: "r2", name: "ביטוח עסק",   category: "ביטוח",  frequency: "monthly",   nextDueDate: addDays(9),  ...vatFields(450,  false) },
+    { id: "r3", name: "טלפון",        category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  ...vatFields(120,  false) },
+    { id: "r4", name: "אינטרנט",      category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  ...vatFields(99,   false) },
+    { id: "r5", name: "טיפול רכב",   category: "רכב",    frequency: "quarterly", nextDueDate: addDays(28), ...vatFields(650,  false) },
   ];
 }
 
 function buildSeedObligations(): AuthorityObligation[] {
   const now = new Date().toISOString();
   return [
-    { id: "ao1", authority: "vat",                amount: 6420, dueDate: addDays(8),  status: "pending", createdAt: now },
-    { id: "ao2", authority: "national_insurance",  amount: 1900, dueDate: addDays(14), status: "pending", createdAt: now },
-    { id: "ao3", authority: "income_tax",          amount: 2800, dueDate: addDays(21), status: "pending", createdAt: now },
+    { id: "ao1", authority: "vat",               amount: 4080, dueDate: addDays(11), status: "pending", createdAt: now },
+    { id: "ao2", authority: "national_insurance", amount: 1540, dueDate: addDays(18), status: "pending", createdAt: now },
+    { id: "ao3", authority: "income_tax",         amount: 2200, dueDate: addDays(25), status: "pending", createdAt: now },
   ];
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 let state: StoreData = loadState() ?? {
-  balance: 42850,
+  balance: 18500,
   transactions: buildSeedTransactions(),
   recurringExpenses: buildSeedRecurring(),
   authorityObligations: buildSeedObligations(),
@@ -406,7 +414,7 @@ export const financeStore = {
   // ── Reset ──
   resetToDemo: () => {
     state = {
-      balance: 42850,
+      balance: 18500,
       transactions: buildSeedTransactions(),
       recurringExpenses: buildSeedRecurring(),
       authorityObligations: buildSeedObligations(),
