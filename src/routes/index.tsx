@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote, Pencil, ChevronLeft } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote, Pencil, ChevronLeft, Shield } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -309,6 +309,18 @@ function Dashboard() {
           <div className="min-w-0">
             <p className="text-sm font-semibold">רשויות</p>
             <p className="text-xs text-muted-foreground">מס ותשלומים</p>
+          </div>
+        </Link>
+        <Link
+          to="/reserve"
+          className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3 transition active:scale-[0.98]"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <Shield className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">מילואים</p>
+            <p className="text-xs text-muted-foreground">מעקב שירות</p>
           </div>
         </Link>
       </section>
