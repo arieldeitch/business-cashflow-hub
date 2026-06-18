@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
-import { Repeat, Pencil, Trash2, Plus } from "lucide-react";
+import { useState, useMemo, type ReactNode } from "react";
+import { Repeat, Pencil, Trash2, Plus, ToggleLeft, ToggleRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   useFinance,
   fmt,
   fmtDate,
   financeStore,
+  daysUntil,
   FREQ_LABELS,
   type RecurringExpense,
   type RecurringFrequency,
 } from "@/lib/finance-store";
 
 export const Route = createFileRoute("/recurring")({
-  head: () => ({ meta: [{ title: "הוצאות קבועות — Cashflow OS" }] }),
+  head: () => ({ meta: [{ title: "הוראות קבע — Cashflow OS" }] }),
   component: RecurringScreen,
 });
 
@@ -27,7 +28,13 @@ function defaultNextDueDate() {
   return d.toISOString().slice(0, 10);
 }
 
-type FormMode = "closed" | "add" | string; // string = id being edited
+function monthlyEquivalent(exp: RecurringExpense): number {
+  if (exp.frequency === "monthly") return exp.amount;
+  if (exp.frequency === "quarterly") return exp.amount / 3;
+  return exp.amount / 12;
+}
+
+type FormMode = "closed" | "add" | string;
 
 function RecurringScreen() {
   const { recurringExpenses } = useFinance();
@@ -43,6 +50,18 @@ function RecurringScreen() {
   const amountBeforeVat = Number(amount) || 0;
   const vatAmount = vatExempt ? 0 : Math.round(amountBeforeVat * VAT_RATE);
   const amountIncludingVat = amountBeforeVat + vatAmount;
+
+  const activeExpenses = useMemo(() => recurringExpenses.filter((e) => e.isActive), [recurringExpenses]);
+
+  const monthlyTotal = useMemo(
+    () => activeExpenses.reduce((sum, e) => sum + monthlyEquivalent(e), 0),
+    [activeExpenses]
+  );
+
+  const nextExpense = useMemo(() => {
+    const sorted = [...activeExpenses].sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate));
+    return sorted[0] ?? null;
+  }, [activeExpenses]);
 
   const openAdd = () => {
     setName("");
@@ -85,7 +104,36 @@ function RecurringScreen() {
   };
 
   return (
-    <AppShell title="הוצאות קבועות" subtitle="חודשיות · רבעוניות · שנתיות">
+    <AppShell title="הוראות קבע" subtitle="הוצאות קבועות וחיובים חודשיים">
+      {/* Summary card */}
+      {recurringExpenses.length > 0 && formMode === "closed" && (
+        <div className="mb-4 rounded-3xl border border-border bg-surface p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            סה״כ הוראות קבע חודשיות
+          </p>
+          <p className="mt-1 font-display text-3xl font-bold tabular">
+            {fmt(Math.round(monthlyTotal))}
+            <span className="mr-1 font-display text-base font-medium text-muted-foreground"> בחודש</span>
+          </p>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
+            <span className="text-muted-foreground">
+              {activeExpenses.length} פעילות מתוך {recurringExpenses.length}
+            </span>
+            {nextExpense && (
+              <span className="text-muted-foreground">
+                הבא: <span className="font-semibold text-foreground">{nextExpense.name}</span>
+                {" "}
+                {daysUntil(nextExpense.nextDueDate) === 0
+                  ? "· היום"
+                  : daysUntil(nextExpense.nextDueDate) < 0
+                    ? `· באיחור`
+                    : `· בעוד ${daysUntil(nextExpense.nextDueDate)} ימים`}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Add button */}
       {formMode === "closed" && (
         <button
@@ -107,7 +155,6 @@ function RecurringScreen() {
             {formMode === "add" ? "הוצאה קבועה חדשה" : "עריכת הוצאה קבועה"}
           </h3>
 
-          {/* Name */}
           <Field label="שם ההוצאה">
             <input
               value={name}
@@ -118,7 +165,6 @@ function RecurringScreen() {
             />
           </Field>
 
-          {/* Amount */}
           <Field label="סכום לפני מע״מ">
             <div className="flex items-baseline gap-1">
               <input
@@ -146,7 +192,6 @@ function RecurringScreen() {
             )}
           </Field>
 
-          {/* VAT exempt toggle */}
           <label className="flex cursor-pointer items-center justify-between">
             <span className="text-sm font-medium">פטור ממע״מ</span>
             <button
@@ -160,7 +205,6 @@ function RecurringScreen() {
             </button>
           </label>
 
-          {/* Category */}
           <Field label="קטגוריה">
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((c) => (
@@ -180,7 +224,6 @@ function RecurringScreen() {
             </div>
           </Field>
 
-          {/* Frequency */}
           <Field label="תדירות">
             <div className="flex gap-2">
               {FREQUENCIES.map((f) => (
@@ -200,7 +243,6 @@ function RecurringScreen() {
             </div>
           </Field>
 
-          {/* Next due date */}
           <Field label="תאריך חיוב הבא">
             <input
               type="date"
@@ -210,7 +252,6 @@ function RecurringScreen() {
             />
           </Field>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-1">
             <button
               type="button"
@@ -234,7 +275,7 @@ function RecurringScreen() {
       {recurringExpenses.length === 0 && formMode === "closed" && (
         <div className="rounded-2xl border border-border bg-surface p-8 text-center">
           <Repeat className="mx-auto h-8 w-8 text-muted-foreground/40" />
-          <p className="mt-3 text-sm font-medium text-muted-foreground">אין הוצאות קבועות</p>
+          <p className="mt-3 text-sm font-medium text-muted-foreground">אין הוראות קבע</p>
           <p className="mt-1 text-xs text-muted-foreground/60">
             הוסף הוצאות כמו שכירות, רואה חשבון, אינטרנט או ביטוח עסק.
           </p>
@@ -247,9 +288,11 @@ function RecurringScreen() {
           {recurringExpenses.map((exp) => (
             <li
               key={exp.id}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
+              className={`flex items-center gap-3 rounded-2xl border bg-surface p-3 transition ${
+                exp.isActive ? "border-border" : "border-border/40 opacity-60"
+              }`}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/15 text-destructive">
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${exp.isActive ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"}`}>
                 <Repeat className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
@@ -263,6 +306,18 @@ function RecurringScreen() {
                   {fmt(exp.amount)}
                 </p>
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => financeStore.toggleRecurringActive(exp.id)}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition ${
+                      exp.isActive
+                        ? "border-success/30 bg-success/10 text-success hover:bg-success/20"
+                        : "border-border bg-surface-elevated text-muted-foreground hover:border-success hover:text-success"
+                    }`}
+                    title={exp.isActive ? "סמן כלא פעיל" : "סמן כפעיל"}
+                  >
+                    {exp.isActive ? <ToggleRight className="h-2.5 w-2.5" /> : <ToggleLeft className="h-2.5 w-2.5" />}
+                    {exp.isActive ? "פעיל" : "לא פעיל"}
+                  </button>
                   <button
                     onClick={() => openEdit(exp)}
                     className="flex items-center gap-1 rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:border-primary hover:text-primary"

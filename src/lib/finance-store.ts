@@ -39,6 +39,7 @@ export interface RecurringExpense {
   category: string;
   frequency: RecurringFrequency;
   nextDueDate: string;
+  isActive: boolean;
 }
 
 export interface AuthorityObligation {
@@ -69,7 +70,7 @@ export interface CollectionsSummary {
 // ─── Persistence ────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "cashflow_os_state";
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 
 type StoreData = {
   balance: number;
@@ -114,8 +115,30 @@ function migrate(raw: unknown): StoreData | null {
     }
   }
 
-  // v3: current schema
+  // v3 → v4: add isActive to recurringExpenses
   if (p.version === 3) {
+    const d = p.data as Partial<StoreData> | undefined;
+    if (
+      d &&
+      typeof d.balance === "number" &&
+      Array.isArray(d.transactions) &&
+      Array.isArray(d.recurringExpenses) &&
+      Array.isArray(d.authorityObligations)
+    ) {
+      return {
+        balance: d.balance,
+        transactions: d.transactions as Transaction[],
+        recurringExpenses: (d.recurringExpenses as Array<Omit<RecurringExpense, "isActive">>).map((r) => ({
+          isActive: true,
+          ...r,
+        })),
+        authorityObligations: d.authorityObligations as AuthorityObligation[],
+      };
+    }
+  }
+
+  // v4: current schema
+  if (p.version === 4) {
     const d = p.data as Partial<StoreData> | undefined;
     if (
       d &&
@@ -127,9 +150,6 @@ function migrate(raw: unknown): StoreData | null {
       return d as StoreData;
     }
   }
-
-  // Future migrations:
-  // if (p.version === 3) { return migrateV3toV4(p.data); }
 
   return null;
 }
@@ -197,11 +217,11 @@ function buildSeedTransactions(): Transaction[] {
 
 function buildSeedRecurring(): RecurringExpense[] {
   return [
-    { id: "r1", name: "רואה חשבון",  category: "ייעוץ",  frequency: "monthly",   nextDueDate: addDays(12), ...vatFields(700,  false) },
-    { id: "r2", name: "ביטוח עסק",   category: "ביטוח",  frequency: "monthly",   nextDueDate: addDays(9),  ...vatFields(450,  false) },
-    { id: "r3", name: "טלפון",        category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  ...vatFields(120,  false) },
-    { id: "r4", name: "אינטרנט",      category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  ...vatFields(99,   false) },
-    { id: "r5", name: "טיפול רכב",   category: "רכב",    frequency: "quarterly", nextDueDate: addDays(28), ...vatFields(650,  false) },
+    { id: "r1", name: "רואה חשבון",  category: "ייעוץ",  frequency: "monthly",   nextDueDate: addDays(12), isActive: true, ...vatFields(700,  false) },
+    { id: "r2", name: "ביטוח עסק",   category: "ביטוח",  frequency: "monthly",   nextDueDate: addDays(9),  isActive: true, ...vatFields(450,  false) },
+    { id: "r3", name: "טלפון",        category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  isActive: true, ...vatFields(120,  false) },
+    { id: "r4", name: "אינטרנט",      category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  isActive: true, ...vatFields(99,   false) },
+    { id: "r5", name: "טיפול רכב",   category: "רכב",    frequency: "quarterly", nextDueDate: addDays(28), isActive: true, ...vatFields(650,  false) },
   ];
 }
 
@@ -342,6 +362,7 @@ export const financeStore = {
   addRecurring: (payload: RecurringPayload) => {
     const newExp: RecurringExpense = {
       id: crypto.randomUUID(),
+      isActive: true,
       name: payload.name,
       category: payload.category,
       frequency: payload.frequency,
@@ -356,7 +377,7 @@ export const financeStore = {
       ...state,
       recurringExpenses: state.recurringExpenses.map((r) =>
         r.id === id
-          ? { id, name: payload.name, category: payload.category, frequency: payload.frequency, nextDueDate: payload.nextDueDate, ...vatFields(payload.amountBeforeVat, payload.vatExempt) }
+          ? { id, isActive: r.isActive, name: payload.name, category: payload.category, frequency: payload.frequency, nextDueDate: payload.nextDueDate, ...vatFields(payload.amountBeforeVat, payload.vatExempt) }
           : r
       ),
     };
@@ -364,6 +385,15 @@ export const financeStore = {
   },
   deleteRecurring: (id: string) => {
     state = { ...state, recurringExpenses: state.recurringExpenses.filter((r) => r.id !== id) };
+    emit();
+  },
+  toggleRecurringActive: (id: string) => {
+    state = {
+      ...state,
+      recurringExpenses: state.recurringExpenses.map((r) =>
+        r.id === id ? { ...r, isActive: !r.isActive } : r
+      ),
+    };
     emit();
   },
 
@@ -525,6 +555,7 @@ export function getRecurringInWindow(
   windowEnd.setDate(windowEnd.getDate() + windowDays);
 
   for (const exp of expenses) {
+    if (!exp.isActive) continue;
     const [y, m, d] = exp.nextDueDate.split("-").map(Number);
     const cur = new Date(y, m - 1, d);
     while (cur < now) advance(cur, exp.frequency);
