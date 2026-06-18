@@ -1,5 +1,22 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, AlertCircle, CheckCircle2, Eye, EyeOff, Bell, Building2, Banknote, Pencil, ChevronLeft, Shield, Repeat, FolderOpen } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Bell,
+  Building2,
+  Banknote,
+  Pencil,
+  ChevronLeft,
+  Shield,
+  Repeat,
+  FolderOpen,
+  Info,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -10,11 +27,13 @@ import {
   getUpcomingAuthorityObligations,
   getCollectionsSummary,
   get30DayProjection,
+  getMonthlyEquivalent,
   labelDaysUntil,
   daysUntil,
   financeStore,
   AUTHORITY_LABELS,
 } from "@/lib/finance-store";
+import { useDocuments } from "@/lib/documents-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,7 +46,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const { balance, startingBalance, transactions, recurringExpenses, authorityObligations } = useFinance();
+  const { balance, startingBalance, transactions, recurringExpenses, authorityObligations } =
+    useFinance();
+  const { documents } = useDocuments();
   const [hidden, setHidden] = useState(false);
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState("");
@@ -35,9 +56,13 @@ function Dashboard() {
 
   // Overdue alert banner counts (independent of projection window)
   const { overdueCount, overdueAmount } = useMemo(() => {
-    let oCount = 0, oAmt = 0;
+    let oCount = 0,
+      oAmt = 0;
     for (const t of transactions) {
-      if (t.status === "overdue") { oCount++; oAmt += t.amount; }
+      if (t.status === "overdue") {
+        oCount++;
+        oAmt += t.amount;
+      }
     }
     return { overdueCount: oCount, overdueAmount: oAmt };
   }, [transactions]);
@@ -45,7 +70,7 @@ function Dashboard() {
   // 30-day projection — shared logic with Forecast screen
   const { expectedIncome, expectedExpenses, projected } = useMemo(
     () => get30DayProjection({ transactions, recurringExpenses, authorityObligations }, balance),
-    [balance, transactions, recurringExpenses, authorityObligations]
+    [balance, transactions, recurringExpenses, authorityObligations],
   );
 
   const net = expectedIncome - expectedExpenses;
@@ -54,30 +79,57 @@ function Dashboard() {
   const collectionsSummary = useMemo(() => getCollectionsSummary(transactions), [transactions]);
   const upcomingObligations = useMemo(
     () => getUpcomingAuthorityObligations(authorityObligations, 3),
-    [authorityObligations]
+    [authorityObligations],
+  );
+
+  const monthlyRecurringTotal = useMemo(
+    () =>
+      Math.round(
+        recurringExpenses
+          .filter((e) => e.isActive)
+          .reduce((sum, e) => sum + getMonthlyEquivalent(e), 0),
+      ),
+    [recurringExpenses],
+  );
+
+  const docsNotSentCount = useMemo(
+    () => documents.filter((d) => !d.sentToAccountant).length,
+    [documents],
   );
 
   const healthInsights = useMemo(() => {
-    type Tone = "success" | "warning" | "destructive";
+    type Tone = "success" | "warning" | "destructive" | "info";
     const items: { key: string; tone: Tone; text: string }[] = [];
 
     // 1. Forecast health — always shown
     if (projected > 0) {
-      items.push({ key: "forecast", tone: "success", text: "התזרים החזוי חיובי ב-30 הימים הקרובים" });
+      items.push({
+        key: "forecast",
+        tone: "success",
+        text: "התזרים החזוי חיובי ב-30 הימים הקרובים",
+      });
     } else {
       items.push({ key: "forecast", tone: "destructive", text: "צפוי מחסור בתזרים" });
     }
 
     // 2. Overdue receivables
     if (collectionsSummary.totalOverdueReceivables > 0) {
-      items.push({ key: "collections", tone: "warning", text: `${fmt(collectionsSummary.totalOverdueReceivables)} בגבייה באיחור` });
+      items.push({
+        key: "collections",
+        tone: "warning",
+        text: `${fmt(collectionsSummary.totalOverdueReceivables)} בגבייה באיחור`,
+      });
     }
 
     // 3. Nearest pending authority obligation
     if (upcomingObligations.length > 0) {
       const nearest = upcomingObligations[0];
       const days = daysUntil(nearest.dueDate);
-      items.push({ key: "authority", tone: "warning", text: `תשלום ${AUTHORITY_LABELS[nearest.authority]} ${labelDaysUntil(days)}` });
+      items.push({
+        key: "authority",
+        tone: "warning",
+        text: `תשלום ${AUTHORITY_LABELS[nearest.authority]} ${labelDaysUntil(days)}`,
+      });
     }
 
     // 4. Cash in risk
@@ -91,8 +143,26 @@ function Dashboard() {
       items.push({ key: "all-clear", tone: "success", text: "אין סיכון תזרימי מיידי" });
     }
 
+    // 6. Recurring monthly total — operational fact
+    if (monthlyRecurringTotal > 0) {
+      items.push({
+        key: "recurring",
+        tone: "info",
+        text: `${fmt(monthlyRecurringTotal)} יורדים קבוע בכל חודש`,
+      });
+    }
+
+    // 7. Documents not sent to accountant
+    if (docsNotSentCount > 0) {
+      items.push({
+        key: "docs-accountant",
+        tone: "warning",
+        text: `יש ${docsNotSentCount} מסמכים שלא הועברו לרו״ח`,
+      });
+    }
+
     return items;
-  }, [projected, collectionsSummary, upcomingObligations]);
+  }, [projected, collectionsSummary, upcomingObligations, monthlyRecurringTotal, docsNotSentCount]);
 
   const upcomingTxs = useMemo(
     () =>
@@ -100,13 +170,13 @@ function Dashboard() {
         .filter((t) => t.status !== "paid")
         .sort((a, b) => +new Date(a.date) - +new Date(b.date))
         .slice(0, 4),
-    [transactions]
+    [transactions],
   );
 
   const createVatObligation = () => {
-    const existingVat = financeStore.get().authorityObligations.find(
-      (o) => o.authority === "vat" && o.status === "pending"
-    );
+    const existingVat = financeStore
+      .get()
+      .authorityObligations.find((o) => o.authority === "vat" && o.status === "pending");
     if (existingVat) {
       navigate({ to: "/authorities" });
       return;
@@ -151,13 +221,17 @@ function Dashboard() {
                 ? CheckCircle2
                 : ins.tone === "destructive"
                   ? AlertCircle
-                  : AlertTriangle;
+                  : ins.tone === "info"
+                    ? Info
+                    : AlertTriangle;
             const color =
               ins.tone === "success"
                 ? "text-success"
                 : ins.tone === "destructive"
                   ? "text-destructive"
-                  : "text-warning";
+                  : ins.tone === "info"
+                    ? "text-primary"
+                    : "text-warning";
             return (
               <li key={ins.key} className="flex items-center gap-2.5">
                 <Icon className={`h-4 w-4 shrink-0 ${color}`} />
@@ -249,8 +323,11 @@ function Dashboard() {
             </div>
             <div className="rounded-2xl bg-black/15 p-3">
               <p className="opacity-80">נטו צפוי</p>
-              <p className={`mt-1 font-display text-lg font-semibold tabular ${net >= 0 ? "" : "text-destructive-foreground"}`}>
-                {net >= 0 ? "+" : "−"}{hidden ? "••••" : fmt(Math.abs(net))}
+              <p
+                className={`mt-1 font-display text-lg font-semibold tabular ${net >= 0 ? "" : "text-destructive-foreground"}`}
+              >
+                {net >= 0 ? "+" : "−"}
+                {hidden ? "••••" : fmt(Math.abs(net))}
               </p>
             </div>
           </div>
@@ -376,7 +453,9 @@ function Dashboard() {
             </div>
             <div className="flex items-center justify-between border-t border-border pt-2.5">
               <p className="text-sm font-semibold">יתרה חזויה</p>
-              <p className={`font-display text-base font-bold tabular ${projected >= 0 ? "text-success" : "text-destructive"}`}>
+              <p
+                className={`font-display text-base font-bold tabular ${projected >= 0 ? "text-success" : "text-destructive"}`}
+              >
                 {hidden ? "••••" : fmt(projected)}
               </p>
             </div>
@@ -417,7 +496,9 @@ function Dashboard() {
         {upcomingTxs.length === 0 ? (
           <div className="mt-3 rounded-2xl border border-border bg-surface p-5 text-center">
             <p className="text-sm text-muted-foreground">אין עדיין פעולות ממתינות</p>
-            <p className="mt-1 text-xs text-muted-foreground/60">הוסף הכנסה או הוצאה כדי לעקוב אחר הפעילות הקרובה</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              הוסף הכנסה או הוצאה כדי לעקוב אחר הפעילות הקרובה
+            </p>
           </div>
         ) : (
           <ul className="mt-3 space-y-2">
@@ -430,7 +511,9 @@ function Dashboard() {
                 >
                   <span
                     className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                      t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                      t.type === "income"
+                        ? "bg-success/15 text-success"
+                        : "bg-destructive/15 text-destructive"
                     }`}
                   >
                     {t.type === "income" ? (
@@ -443,12 +526,17 @@ function Dashboard() {
                     <p className="truncate text-sm font-semibold">{t.party}</p>
                     <p className="text-xs text-muted-foreground">
                       {fmtDate(t.date)}
-                      {t.status === "overdue" && <span className="ms-1 text-warning">· באיחור</span>}
+                      {t.status === "overdue" && (
+                        <span className="ms-1 text-warning">· באיחור</span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className={`font-display text-sm font-semibold tabular ${t.type === "income" ? "text-success" : "text-foreground"}`}>
-                      {t.type === "income" ? "+" : "−"}{fmt(t.amount)}
+                    <p
+                      className={`font-display text-sm font-semibold tabular ${t.type === "income" ? "text-success" : "text-foreground"}`}
+                    >
+                      {t.type === "income" ? "+" : "−"}
+                      {fmt(t.amount)}
                     </p>
                     <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground/40" />
                   </div>
@@ -475,7 +563,9 @@ function Dashboard() {
             <div className="flex flex-col items-center gap-2 py-2 text-center">
               <Banknote className="h-6 w-6 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">אין כרגע גביות פתוחות</p>
-              <p className="text-xs text-muted-foreground/60">הוסף גביה מלקוח כדי לעקוב אחר תשלומים</p>
+              <p className="text-xs text-muted-foreground/60">
+                הוסף גביה מלקוח כדי לעקוב אחר תשלומים
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -491,7 +581,9 @@ function Dashboard() {
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   באיחור
                 </p>
-                <p className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.totalOverdueReceivables > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                <p
+                  className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.totalOverdueReceivables > 0 ? "text-destructive" : "text-muted-foreground"}`}
+                >
                   {fmt(collectionsSummary.totalOverdueReceivables)}
                 </p>
               </div>
@@ -499,7 +591,9 @@ function Dashboard() {
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   לקוחות באיחור
                 </p>
-                <p className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.overdueCustomersCount > 0 ? "text-warning" : "text-muted-foreground"}`}>
+                <p
+                  className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.overdueCustomersCount > 0 ? "text-warning" : "text-muted-foreground"}`}
+                >
                   {collectionsSummary.overdueCustomersCount}
                 </p>
               </div>
@@ -507,7 +601,9 @@ function Dashboard() {
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   כסף בסיכון
                 </p>
-                <p className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.cashInRisk > 0 ? "text-warning" : "text-muted-foreground"}`}>
+                <p
+                  className={`mt-1 font-display text-lg font-bold tabular ${collectionsSummary.cashInRisk > 0 ? "text-warning" : "text-muted-foreground"}`}
+                >
                   {fmt(collectionsSummary.cashInRisk)}
                 </p>
               </div>
@@ -532,7 +628,9 @@ function Dashboard() {
             <div className="flex flex-col items-center gap-2 py-2 text-center">
               <Building2 className="h-6 w-6 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">אין כרגע התחייבויות לרשויות</p>
-              <p className="text-xs text-muted-foreground/60">הוסף תשלום למע״מ, מס הכנסה או ביטוח לאומי</p>
+              <p className="text-xs text-muted-foreground/60">
+                הוסף תשלום למע״מ, מס הכנסה או ביטוח לאומי
+              </p>
             </div>
           ) : (
             <ul className="space-y-3">
@@ -550,7 +648,9 @@ function Dashboard() {
                   <li key={o.id} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold">{AUTHORITY_LABELS[o.authority]}</p>
-                      <p className={`text-xs ${isOverdueDash ? "text-destructive" : isUrgentDash ? "text-warning" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-xs ${isOverdueDash ? "text-destructive" : isUrgentDash ? "text-warning" : "text-muted-foreground"}`}
+                      >
                         {dueLabelDash}
                       </p>
                     </div>
@@ -654,9 +754,13 @@ function StatCard({
 }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-4">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-2 font-display text-xl font-semibold tabular">{fmt(amount)}</p>
-      <p className={`mt-1 text-[11px] font-medium ${tone === "success" ? "text-success" : "text-destructive"}`}>
+      <p
+        className={`mt-1 text-[11px] font-medium ${tone === "success" ? "text-success" : "text-destructive"}`}
+      >
         {sub}
       </p>
     </div>
