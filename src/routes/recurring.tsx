@@ -51,11 +51,14 @@ function RecurringScreen() {
   const vatAmount = vatExempt ? 0 : Math.round(amountBeforeVat * VAT_RATE);
   const amountIncludingVat = amountBeforeVat + vatAmount;
 
-  const activeExpenses = useMemo(() => recurringExpenses.filter((e) => e.isActive), [recurringExpenses]);
+  const activeExpenses = useMemo(
+    () => recurringExpenses.filter((e) => e.isActive),
+    [recurringExpenses],
+  );
 
   const monthlyTotal = useMemo(
     () => activeExpenses.reduce((sum, e) => sum + monthlyEquivalent(e), 0),
-    [activeExpenses]
+    [activeExpenses],
   );
 
   const nextExpense = useMemo(() => {
@@ -113,7 +116,10 @@ function RecurringScreen() {
           </p>
           <p className="mt-1 font-display text-3xl font-bold tabular">
             {fmt(Math.round(monthlyTotal))}
-            <span className="mr-1 font-display text-base font-medium text-muted-foreground"> בחודש</span>
+            <span className="mr-1 font-display text-base font-medium text-muted-foreground">
+              {" "}
+              בחודש
+            </span>
           </p>
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
             <span className="text-muted-foreground">
@@ -121,8 +127,7 @@ function RecurringScreen() {
             </span>
             {nextExpense && (
               <span className="text-muted-foreground">
-                הבא: <span className="font-semibold text-foreground">{nextExpense.name}</span>
-                {" "}
+                הבא: <span className="font-semibold text-foreground">{nextExpense.name}</span>{" "}
                 {daysUntil(nextExpense.nextDueDate) === 0
                   ? "· היום"
                   : daysUntil(nextExpense.nextDueDate) < 0
@@ -201,7 +206,9 @@ function RecurringScreen() {
               onClick={() => setVatExempt((v) => !v)}
               className={`relative h-6 w-11 rounded-full transition-colors ${vatExempt ? "bg-primary" : "bg-muted"}`}
             >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${vatExempt ? "translate-x-5" : "translate-x-0.5"}`} />
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${vatExempt ? "translate-x-5" : "translate-x-0.5"}`}
+              />
             </button>
           </label>
 
@@ -292,7 +299,9 @@ function RecurringScreen() {
                 exp.isActive ? "border-border" : "border-border/40 opacity-60"
               }`}
             >
-              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${exp.isActive ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"}`}>
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${exp.isActive ? "bg-destructive/15 text-destructive" : "bg-muted text-muted-foreground"}`}
+              >
                 <Repeat className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
@@ -302,9 +311,7 @@ function RecurringScreen() {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1.5">
-                <p className="font-display text-sm font-semibold tabular">
-                  {fmt(exp.amount)}
-                </p>
+                <p className="font-display text-sm font-semibold tabular">{fmt(exp.amount)}</p>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => financeStore.toggleRecurringActive(exp.id)}
@@ -315,7 +322,11 @@ function RecurringScreen() {
                     }`}
                     title={exp.isActive ? "סמן כלא פעיל" : "סמן כפעיל"}
                   >
-                    {exp.isActive ? <ToggleRight className="h-2.5 w-2.5" /> : <ToggleLeft className="h-2.5 w-2.5" />}
+                    {exp.isActive ? (
+                      <ToggleRight className="h-2.5 w-2.5" />
+                    ) : (
+                      <ToggleLeft className="h-2.5 w-2.5" />
+                    )}
                     {exp.isActive ? "פעיל" : "לא פעיל"}
                   </button>
                   <button

@@ -74,7 +74,12 @@ export const documentsStore = {
 
   addDocument: (payload: AddDocumentPayload) => {
     const now = new Date().toISOString();
-    const doc: BusinessDocument = { id: crypto.randomUUID(), createdAt: now, updatedAt: now, ...payload };
+    const doc: BusinessDocument = {
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+      ...payload,
+    };
     docsState = { documents: [doc, ...docsState.documents] };
     emitDocs();
   },
@@ -82,7 +87,7 @@ export const documentsStore = {
   updateDocument: (id: string, payload: UpdateDocumentPayload) => {
     docsState = {
       documents: docsState.documents.map((d) =>
-        d.id === id ? { ...d, ...payload, updatedAt: new Date().toISOString() } : d
+        d.id === id ? { ...d, ...payload, updatedAt: new Date().toISOString() } : d,
       ),
     };
     emitDocs();
@@ -93,7 +98,7 @@ export const documentsStore = {
       documents: docsState.documents.map((d) =>
         d.id === id
           ? { ...d, sentToAccountant: !d.sentToAccountant, updatedAt: new Date().toISOString() }
-          : d
+          : d,
       ),
     };
     emitDocs();

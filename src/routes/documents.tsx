@@ -1,14 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState, type ReactNode } from "react";
-import {
-  FileText,
-  Plus,
-  Trash2,
-  Pencil,
-  CheckCircle2,
-  Circle,
-  Upload,
-} from "lucide-react";
+import { FileText, Plus, Trash2, Pencil, CheckCircle2, Circle, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   useDocuments,
@@ -139,11 +131,15 @@ function DocumentsScreen() {
       fileType,
       documentType,
       direction,
-      uploadedAt: formMode === "add" ? now : (documents.find((d) => d.id === formMode)?.uploadedAt ?? now),
+      uploadedAt:
+        formMode === "add" ? now : (documents.find((d) => d.id === formMode)?.uploadedAt ?? now),
       documentDate: documentDate || null,
       amount: amount !== "" ? Number(amount) : null,
       supplierCustomerName: supplierCustomerName || null,
-      sentToAccountant: formMode === "add" ? false : (documents.find((d) => d.id === formMode)?.sentToAccountant ?? false),
+      sentToAccountant:
+        formMode === "add"
+          ? false
+          : (documents.find((d) => d.id === formMode)?.sentToAccountant ?? false),
       notes: notes || null,
     };
     if (formMode === "add") {
@@ -183,7 +179,9 @@ function DocumentsScreen() {
               <p className="mt-0.5 text-[11px] text-muted-foreground">סה״כ</p>
             </div>
             <div className="text-center">
-              <p className={`font-display text-xl font-bold tabular ${notSentCount > 0 ? "text-warning" : ""}`}>
+              <p
+                className={`font-display text-xl font-bold tabular ${notSentCount > 0 ? "text-warning" : ""}`}
+              >
                 {notSentCount}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">לא הועבר לרו״ח</p>
@@ -233,9 +231,7 @@ function DocumentsScreen() {
               )}
             </div>
             {!fileName && (
-              <p className="mt-1.5 text-xs text-muted-foreground/60">
-                ניתן גם להזין שם קובץ ידנית
-              </p>
+              <p className="mt-1.5 text-xs text-muted-foreground/60">ניתן גם להזין שם קובץ ידנית</p>
             )}
             {!fileName && (
               <input
@@ -393,10 +389,7 @@ function DocumentsScreen() {
       {filtered.length > 0 && formMode === "closed" && (
         <ul className="space-y-2">
           {filtered.map((doc) => (
-            <li
-              key={doc.id}
-              className="rounded-2xl border border-border bg-surface p-4"
-            >
+            <li key={doc.id} className="rounded-2xl border border-border bg-surface p-4">
               {/* Top row */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -405,11 +398,13 @@ function DocumentsScreen() {
                   </span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        doc.direction === "expense"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-success/10 text-success"
-                      }`}>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          doc.direction === "expense"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-success/10 text-success"
+                        }`}
+                      >
                         {DOC_TYPE_LABELS[doc.documentType]} · {DOC_DIRECTION_LABELS[doc.direction]}
                       </span>
                     </div>

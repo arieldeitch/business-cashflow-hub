@@ -3,12 +3,7 @@ import { useSyncExternalStore } from "react";
 export type TxType = "income" | "expense";
 export type TxStatus = "paid" | "pending" | "overdue";
 export type RecurringFrequency = "monthly" | "quarterly" | "yearly";
-export type AuthorityType =
-  | "vat"
-  | "income_tax"
-  | "national_insurance"
-  | "municipality"
-  | "other";
+export type AuthorityType = "vat" | "income_tax" | "national_insurance" | "municipality" | "other";
 
 export interface Transaction {
   id: string;
@@ -105,7 +100,12 @@ function migrate(raw: unknown): StoreData | null {
   // v2 → v3: add authorityObligations
   if (p.version === 2) {
     const d = p.data as Partial<StoreData> | undefined;
-    if (d && typeof d.balance === "number" && Array.isArray(d.transactions) && Array.isArray(d.recurringExpenses)) {
+    if (
+      d &&
+      typeof d.balance === "number" &&
+      Array.isArray(d.transactions) &&
+      Array.isArray(d.recurringExpenses)
+    ) {
       return {
         balance: d.balance,
         transactions: d.transactions as Transaction[],
@@ -128,10 +128,12 @@ function migrate(raw: unknown): StoreData | null {
       return {
         balance: d.balance,
         transactions: d.transactions as Transaction[],
-        recurringExpenses: (d.recurringExpenses as Array<Omit<RecurringExpense, "isActive">>).map((r) => ({
-          isActive: true,
-          ...r,
-        })),
+        recurringExpenses: (d.recurringExpenses as Array<Omit<RecurringExpense, "isActive">>).map(
+          (r) => ({
+            isActive: true,
+            ...r,
+          }),
+        ),
         authorityObligations: d.authorityObligations as AuthorityObligation[],
       };
     }
@@ -181,7 +183,14 @@ function vatFields(amountBeforeVat: number, vatExempt: boolean) {
   const vatRate = vatExempt ? 0 : 0.17;
   const vatAmount = Math.round(amountBeforeVat * vatRate);
   const amountIncludingVat = amountBeforeVat + vatAmount;
-  return { amountBeforeVat, vatAmount, amountIncludingVat, vatRate, vatExempt, amount: amountIncludingVat };
+  return {
+    amountBeforeVat,
+    vatAmount,
+    amountIncludingVat,
+    vatRate,
+    vatExempt,
+    amount: amountIncludingVat,
+  };
 }
 
 const today = new Date();
@@ -195,42 +204,207 @@ const addDays = (n: number) => {
 function buildSeedTransactions(): Transaction[] {
   return [
     // ── Paid income ──
-    { id: "t1",  type: "income",  party: "תיכון רבין מודיעין",      category: "סדנאות", date: addDays(-14), status: "paid",    ...vatFields(12000, false) },
-    { id: "t2",  type: "income",  party: "משפחת כהן",               category: "קבלנות", date: addDays(-5),  status: "paid",    ...vatFields(10000, false) },
+    {
+      id: "t1",
+      type: "income",
+      party: "תיכון רבין מודיעין",
+      category: "סדנאות",
+      date: addDays(-14),
+      status: "paid",
+      ...vatFields(12000, false),
+    },
+    {
+      id: "t2",
+      type: "income",
+      party: "משפחת כהן",
+      category: "קבלנות",
+      date: addDays(-5),
+      status: "paid",
+      ...vatFields(10000, false),
+    },
     // ── Expected income ──
-    { id: "t3",  type: "income",  party: "בית ספר הרצל ירושלים",    category: "סדנאות", date: addDays(8),   status: "pending", ...vatFields(8500,  false) },
-    { id: "t4",  type: "income",  party: "משפחת לוי",               category: "קבלנות", date: addDays(13),  status: "pending", ...vatFields(14500, false) },
-    { id: "t5",  type: "income",  party: "בית ספר נופי הסלע",       category: "סדנאות", date: addDays(22),  status: "pending", ...vatFields(9200,  false) },
+    {
+      id: "t3",
+      type: "income",
+      party: "בית ספר הרצל ירושלים",
+      category: "סדנאות",
+      date: addDays(8),
+      status: "pending",
+      ...vatFields(8500, false),
+    },
+    {
+      id: "t4",
+      type: "income",
+      party: "משפחת לוי",
+      category: "קבלנות",
+      date: addDays(13),
+      status: "pending",
+      ...vatFields(14500, false),
+    },
+    {
+      id: "t5",
+      type: "income",
+      party: "בית ספר נופי הסלע",
+      category: "סדנאות",
+      date: addDays(22),
+      status: "pending",
+      ...vatFields(9200, false),
+    },
     // ── Overdue income (remaining balance from partial payment) ──
-    { id: "t6",  type: "income",  party: "משפחת כהן",               category: "קבלנות", date: addDays(-4),  status: "overdue", ...vatFields(8000,  false) },
+    {
+      id: "t6",
+      type: "income",
+      party: "משפחת כהן",
+      category: "קבלנות",
+      date: addDays(-4),
+      status: "overdue",
+      ...vatFields(8000, false),
+    },
     // ── Paid expenses ──
-    { id: "t7",  type: "expense", party: "מחסן העצים ירושלים",      category: "חומרים", date: addDays(-10), status: "paid",    ...vatFields(3200,  false) },
-    { id: "t8",  type: "expense", party: "בזק",                     category: "תקשורת", date: addDays(-8),  status: "paid",    ...vatFields(99,    false) },
+    {
+      id: "t7",
+      type: "expense",
+      party: "מחסן העצים ירושלים",
+      category: "חומרים",
+      date: addDays(-10),
+      status: "paid",
+      ...vatFields(3200, false),
+    },
+    {
+      id: "t8",
+      type: "expense",
+      party: "בזק",
+      category: "תקשורת",
+      date: addDays(-8),
+      status: "paid",
+      ...vatFields(99, false),
+    },
     // ── Upcoming expenses ──
-    { id: "t9",  type: "expense", party: "אייס",                    category: "חומרים", date: addDays(5),   status: "pending", ...vatFields(850,   false) },
-    { id: "t10", type: "expense", party: "הום סנטר",                category: "חומרים", date: addDays(5),   status: "pending", ...vatFields(620,   false) },
-    { id: "t11", type: "expense", party: "שירביט ביטוח",            category: "ביטוח",  date: addDays(9),   status: "pending", ...vatFields(450,   false) },
-    { id: "t12", type: "expense", party: "רואה חשבון",              category: "ייעוץ",  date: addDays(12),  status: "pending", ...vatFields(700,   false) },
-    { id: "t13", type: "expense", party: "סונול",                   category: "רכב",    date: addDays(-2),  status: "overdue", ...vatFields(1200,  false) },
+    {
+      id: "t9",
+      type: "expense",
+      party: "אייס",
+      category: "חומרים",
+      date: addDays(5),
+      status: "pending",
+      ...vatFields(850, false),
+    },
+    {
+      id: "t10",
+      type: "expense",
+      party: "הום סנטר",
+      category: "חומרים",
+      date: addDays(5),
+      status: "pending",
+      ...vatFields(620, false),
+    },
+    {
+      id: "t11",
+      type: "expense",
+      party: "שירביט ביטוח",
+      category: "ביטוח",
+      date: addDays(9),
+      status: "pending",
+      ...vatFields(450, false),
+    },
+    {
+      id: "t12",
+      type: "expense",
+      party: "רואה חשבון",
+      category: "ייעוץ",
+      date: addDays(12),
+      status: "pending",
+      ...vatFields(700, false),
+    },
+    {
+      id: "t13",
+      type: "expense",
+      party: "סונול",
+      category: "רכב",
+      date: addDays(-2),
+      status: "overdue",
+      ...vatFields(1200, false),
+    },
   ];
 }
 
 function buildSeedRecurring(): RecurringExpense[] {
   return [
-    { id: "r1", name: "רואה חשבון",  category: "ייעוץ",  frequency: "monthly",   nextDueDate: addDays(12), isActive: true, ...vatFields(700,  false) },
-    { id: "r2", name: "ביטוח עסק",   category: "ביטוח",  frequency: "monthly",   nextDueDate: addDays(9),  isActive: true, ...vatFields(450,  false) },
-    { id: "r3", name: "טלפון",        category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  isActive: true, ...vatFields(120,  false) },
-    { id: "r4", name: "אינטרנט",      category: "תקשורת", frequency: "monthly",   nextDueDate: addDays(6),  isActive: true, ...vatFields(99,   false) },
-    { id: "r5", name: "טיפול רכב",   category: "רכב",    frequency: "quarterly", nextDueDate: addDays(28), isActive: true, ...vatFields(650,  false) },
+    {
+      id: "r1",
+      name: "רואה חשבון",
+      category: "ייעוץ",
+      frequency: "monthly",
+      nextDueDate: addDays(12),
+      isActive: true,
+      ...vatFields(700, false),
+    },
+    {
+      id: "r2",
+      name: "ביטוח עסק",
+      category: "ביטוח",
+      frequency: "monthly",
+      nextDueDate: addDays(9),
+      isActive: true,
+      ...vatFields(450, false),
+    },
+    {
+      id: "r3",
+      name: "טלפון",
+      category: "תקשורת",
+      frequency: "monthly",
+      nextDueDate: addDays(6),
+      isActive: true,
+      ...vatFields(120, false),
+    },
+    {
+      id: "r4",
+      name: "אינטרנט",
+      category: "תקשורת",
+      frequency: "monthly",
+      nextDueDate: addDays(6),
+      isActive: true,
+      ...vatFields(99, false),
+    },
+    {
+      id: "r5",
+      name: "טיפול רכב",
+      category: "רכב",
+      frequency: "quarterly",
+      nextDueDate: addDays(28),
+      isActive: true,
+      ...vatFields(650, false),
+    },
   ];
 }
 
 function buildSeedObligations(): AuthorityObligation[] {
   const now = new Date().toISOString();
   return [
-    { id: "ao1", authority: "vat",               amount: 4080, dueDate: addDays(11), status: "pending", createdAt: now },
-    { id: "ao2", authority: "national_insurance", amount: 1540, dueDate: addDays(18), status: "pending", createdAt: now },
-    { id: "ao3", authority: "income_tax",         amount: 2200, dueDate: addDays(25), status: "pending", createdAt: now },
+    {
+      id: "ao1",
+      authority: "vat",
+      amount: 4080,
+      dueDate: addDays(11),
+      status: "pending",
+      createdAt: now,
+    },
+    {
+      id: "ao2",
+      authority: "national_insurance",
+      amount: 1540,
+      dueDate: addDays(18),
+      status: "pending",
+      createdAt: now,
+    },
+    {
+      id: "ao3",
+      authority: "income_tax",
+      amount: 2200,
+      dueDate: addDays(25),
+      status: "pending",
+      createdAt: now,
+    },
   ];
 }
 
@@ -313,7 +487,7 @@ export const financeStore = {
     state = {
       ...state,
       transactions: state.transactions.map((t) =>
-        t.id === id ? { ...t, status: "paid", paidAt: today } : t
+        t.id === id ? { ...t, status: "paid", paidAt: today } : t,
       ),
     };
     emit();
@@ -326,7 +500,16 @@ export const financeStore = {
     state = { ...state, transactions: [tx, ...state.transactions] };
     emit();
   },
-  updateTransaction: (id: string, payload: { party: string; amountBeforeVat: number; vatExempt: boolean; date: string; category?: string }) => {
+  updateTransaction: (
+    id: string,
+    payload: {
+      party: string;
+      amountBeforeVat: number;
+      vatExempt: boolean;
+      date: string;
+      category?: string;
+    },
+  ) => {
     const vatRate = payload.vatExempt ? 0 : 0.17;
     const vatAmount = Math.round(payload.amountBeforeVat * vatRate);
     const amountIncludingVat = payload.amountBeforeVat + vatAmount;
@@ -338,7 +521,8 @@ export const financeStore = {
         const dueDate = new Date(y, m - 1, d);
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        const status: TxStatus = t.status === "paid" ? "paid" : dueDate < todayStart ? "overdue" : "pending";
+        const status: TxStatus =
+          t.status === "paid" ? "paid" : dueDate < todayStart ? "overdue" : "pending";
         return {
           ...t,
           party: payload.party,
@@ -377,8 +561,16 @@ export const financeStore = {
       ...state,
       recurringExpenses: state.recurringExpenses.map((r) =>
         r.id === id
-          ? { id, isActive: r.isActive, name: payload.name, category: payload.category, frequency: payload.frequency, nextDueDate: payload.nextDueDate, ...vatFields(payload.amountBeforeVat, payload.vatExempt) }
-          : r
+          ? {
+              id,
+              isActive: r.isActive,
+              name: payload.name,
+              category: payload.category,
+              frequency: payload.frequency,
+              nextDueDate: payload.nextDueDate,
+              ...vatFields(payload.amountBeforeVat, payload.vatExempt),
+            }
+          : r,
       ),
     };
     emit();
@@ -391,7 +583,7 @@ export const financeStore = {
     state = {
       ...state,
       recurringExpenses: state.recurringExpenses.map((r) =>
-        r.id === id ? { ...r, isActive: !r.isActive } : r
+        r.id === id ? { ...r, isActive: !r.isActive } : r,
       ),
     };
     emit();
@@ -416,14 +608,23 @@ export const financeStore = {
       ...state,
       authorityObligations: state.authorityObligations.map((o) =>
         o.id === id
-          ? { ...o, authority: payload.authority, amount: payload.amount, dueDate: payload.dueDate, notes: payload.notes }
-          : o
+          ? {
+              ...o,
+              authority: payload.authority,
+              amount: payload.amount,
+              dueDate: payload.dueDate,
+              notes: payload.notes,
+            }
+          : o,
       ),
     };
     emit();
   },
   deleteAuthorityObligation: (id: string) => {
-    state = { ...state, authorityObligations: state.authorityObligations.filter((o) => o.id !== id) };
+    state = {
+      ...state,
+      authorityObligations: state.authorityObligations.filter((o) => o.id !== id),
+    };
     emit();
   },
   restoreAuthorityObligation: (obl: AuthorityObligation) => {
@@ -431,7 +632,12 @@ export const financeStore = {
     emit();
   },
   markAuthorityObligationPaid: (id: string) => {
-    state = { ...state, authorityObligations: state.authorityObligations.map((o) => o.id === id ? { ...o, status: "paid" } : o) };
+    state = {
+      ...state,
+      authorityObligations: state.authorityObligations.map((o) =>
+        o.id === id ? { ...o, status: "paid" } : o,
+      ),
+    };
     emit();
   },
 
@@ -487,7 +693,11 @@ export function useFinance(): FinanceState {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export const fmt = (n: number) =>
-  new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("he-IL", {
+    style: "currency",
+    currency: "ILS",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 export const fmtDate = (isoDate: string): string => {
   const [y, m, d] = isoDate.split("-");
@@ -535,7 +745,7 @@ export function labelDaysUntil(days: number): string {
 /** Returns pending obligations sorted by dueDate ascending. */
 export function getUpcomingAuthorityObligations(
   obligations: AuthorityObligation[],
-  limit?: number
+  limit?: number,
 ): AuthorityObligation[] {
   const result = obligations
     .filter((o) => o.status === "pending")
@@ -546,7 +756,7 @@ export function getUpcomingAuthorityObligations(
 /** Returns a map of ISO-date → total recurring outflow for a window. */
 export function getRecurringInWindow(
   expenses: RecurringExpense[],
-  windowDays: number
+  windowDays: number,
 ): Map<string, number> {
   const result = new Map<string, number>();
   const now = new Date();
@@ -618,7 +828,7 @@ export interface ProjectionTotals {
  */
 export function get30DayProjection(
   data: Pick<StoreData, "transactions" | "recurringExpenses" | "authorityObligations">,
-  currentBalance: number
+  currentBalance: number,
 ): ProjectionTotals {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -654,7 +864,9 @@ export function get30DayProjection(
 
 /** All income transactions that are not yet paid. */
 export function getOpenReceivables(transactions: Transaction[]): Transaction[] {
-  return transactions.filter((t) => t.type === "income" && (t.status === "pending" || t.status === "overdue"));
+  return transactions.filter(
+    (t) => t.type === "income" && (t.status === "pending" || t.status === "overdue"),
+  );
 }
 
 /** All income transactions that are overdue. */
