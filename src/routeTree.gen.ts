@@ -15,6 +15,7 @@ import { Route as RecurringRouteImport } from './routes/recurring'
 import { Route as IncomeRouteImport } from './routes/income'
 import { Route as ForecastRouteImport } from './routes/forecast'
 import { Route as ExpenseRouteImport } from './routes/expense'
+import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as AuthoritiesRouteImport } from './routes/authorities'
 import { Route as AddRouteImport } from './routes/add'
@@ -51,6 +52,11 @@ const ExpenseRoute = ExpenseRouteImport.update({
   path: '/expense',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentsRoute = DocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsRoute = CollectionsRouteImport.update({
   id: '/collections',
   path: '/collections',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/add': typeof AddRoute
   '/authorities': typeof AuthoritiesRoute
   '/collections': typeof CollectionsRoute
+  '/documents': typeof DocumentsRoute
   '/expense': typeof ExpenseRoute
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/add': typeof AddRoute
   '/authorities': typeof AuthoritiesRoute
   '/collections': typeof CollectionsRoute
+  '/documents': typeof DocumentsRoute
   '/expense': typeof ExpenseRoute
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/add': typeof AddRoute
   '/authorities': typeof AuthoritiesRoute
   '/collections': typeof CollectionsRoute
+  '/documents': typeof DocumentsRoute
   '/expense': typeof ExpenseRoute
   '/forecast': typeof ForecastRoute
   '/income': typeof IncomeRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/authorities'
     | '/collections'
+    | '/documents'
     | '/expense'
     | '/forecast'
     | '/income'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/authorities'
     | '/collections'
+    | '/documents'
     | '/expense'
     | '/forecast'
     | '/income'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/authorities'
     | '/collections'
+    | '/documents'
     | '/expense'
     | '/forecast'
     | '/income'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   AddRoute: typeof AddRoute
   AuthoritiesRoute: typeof AuthoritiesRoute
   CollectionsRoute: typeof CollectionsRoute
+  DocumentsRoute: typeof DocumentsRoute
   ExpenseRoute: typeof ExpenseRoute
   ForecastRoute: typeof ForecastRoute
   IncomeRoute: typeof IncomeRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExpenseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documents': {
+      id: '/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof DocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/collections': {
       id: '/collections'
       path: '/collections'
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddRoute: AddRoute,
   AuthoritiesRoute: AuthoritiesRoute,
   CollectionsRoute: CollectionsRoute,
+  DocumentsRoute: DocumentsRoute,
   ExpenseRoute: ExpenseRoute,
   ForecastRoute: ForecastRoute,
   IncomeRoute: IncomeRoute,
