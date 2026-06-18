@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, Check } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, ListChecks, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
@@ -68,9 +68,26 @@ function Transactions() {
 
       <div className="mt-4 space-y-6">
         {groups.length === 0 && (
-          <p className="rounded-2xl border border-border bg-surface p-8 text-center text-sm text-muted-foreground">
-            אין פעולות להצגה.
-          </p>
+          <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+            <ListChecks className="mx-auto h-8 w-8 text-muted-foreground/30" />
+            {filter === "all" ? (
+              <>
+                <p className="mt-3 text-sm font-semibold">אין עדיין פעולות</p>
+                <p className="mt-1 text-xs text-muted-foreground/60">
+                  התחל לתעד הכנסות והוצאות כדי לעקוב אחר הפעילות העסקית
+                </p>
+                <Link
+                  to="/add"
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition active:scale-[0.98]"
+                >
+                  <Plus className="h-4 w-4" />
+                  הוסף פעולה
+                </Link>
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">אין פעולות בסינון זה</p>
+            )}
+          </div>
         )}
         {groups.map(([label, items]) => (
           <section key={label}>
@@ -90,10 +107,16 @@ function Transactions() {
                   >
                     <span
                       className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                        t.type === "income" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                        t.type === "income"
+                          ? "bg-success/15 text-success"
+                          : "bg-destructive/15 text-destructive"
                       }`}
                     >
-                      {t.type === "income" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                      {t.type === "income" ? (
+                        <ArrowDownLeft className="h-5 w-5" />
+                      ) : (
+                        <ArrowUpRight className="h-5 w-5" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{t.party}</p>
@@ -148,7 +171,9 @@ function StatusPill({ status }: { status: Transaction["status"] }) {
     overdue: "באיחור",
   } as const;
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${map[status]}`}>
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${map[status]}`}
+    >
       {labels[status]}
     </span>
   );

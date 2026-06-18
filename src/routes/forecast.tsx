@@ -2,7 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useFinance, fmt, localISO, getRecurringInWindow } from "@/lib/finance-store";
-import { TrendingUp, TrendingDown, Repeat, Building2, AlertCircle } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Repeat,
+  Building2,
+  AlertCircle,
+  CalendarDays,
+} from "lucide-react";
 
 export const Route = createFileRoute("/forecast")({
   head: () => ({ meta: [{ title: "תחזית — Cashflow OS" }] }),
@@ -58,8 +65,10 @@ function Forecast() {
         if (t.status === "paid") continue;
         if (i === 0 && t.status === "overdue") {
           // Bucket all overdue receivables/payables as Day 0 flows
-          if (t.type === "income") { inToday += t.amount; overdueIn += t.amount; }
-          else outToday += t.amount;
+          if (t.type === "income") {
+            inToday += t.amount;
+            overdueIn += t.amount;
+          } else outToday += t.amount;
         } else if (t.date === dateKey && t.status === "pending") {
           if (t.type === "income") inToday += t.amount;
           else outToday += t.amount;
@@ -73,7 +82,15 @@ function Forecast() {
       running += inToday - outToday;
       totalIn += inToday;
       totalOut += outToday;
-      dayList.push({ date: d, balance: running, in: inToday, out: outToday, recurring: recurringOut, authority: authorityOut, overdueIn });
+      dayList.push({
+        date: d,
+        balance: running,
+        in: inToday,
+        out: outToday,
+        recurring: recurringOut,
+        authority: authorityOut,
+        overdueIn,
+      });
     }
 
     const balances = dayList.map((d) => d.balance);
@@ -100,7 +117,9 @@ function Forecast() {
     const y = padY + (1 - (d.balance - minBalance) / range) * (H - padY * 2);
     return [x, y] as const;
   });
-  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const pathD = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`)
+    .join(" ");
   const areaD = `${pathD} L${points[points.length - 1][0]},${H} L${points[0][0]},${H} Z`;
 
   const daysWithFlow = days.filter((d) => d.in || d.out);
@@ -114,7 +133,8 @@ function Forecast() {
         <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">יתרה צפויה</p>
         <p className="mt-2 font-display text-3xl font-bold tabular">{fmt(finalBalance)}</p>
         <p className="mt-1 text-xs opacity-80">
-          מ־{fmt(balance)} היום · {net >= 0 ? "+" : "−"}{fmt(Math.abs(net))} נטו
+          מ־{fmt(balance)} היום · {net >= 0 ? "+" : "−"}
+          {fmt(Math.abs(net))} נטו
         </p>
 
         <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 h-40 w-full">
@@ -125,7 +145,14 @@ function Forecast() {
             </linearGradient>
           </defs>
           <path d={areaD} fill="url(#area)" />
-          <path d={pathD} fill="none" stroke="oklch(0.2 0.04 180)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d={pathD}
+            fill="none"
+            stroke="oklch(0.2 0.04 180)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           {points.length > 0 && (
             <circle
               cx={points[points.length - 1][0]}
@@ -182,9 +209,13 @@ function Forecast() {
           </div>
         </div>
         {daysWithFlow.length === 0 ? (
-          <p className="rounded-2xl border border-border bg-surface p-6 text-center text-sm text-muted-foreground">
-            אין פעולות צפויות ב-30 הימים הקרובים.
-          </p>
+          <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+            <CalendarDays className="mx-auto h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-3 text-sm font-semibold">אין תנועות צפויות</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              הוסף הכנסות, הוצאות או הוראות קבע כדי לראות את התחזית
+            </p>
+          </div>
         ) : (
           <ul className="space-y-2">
             {daysWithFlow.slice(0, 10).map((d) => (
@@ -223,6 +254,11 @@ function Forecast() {
               </li>
             ))}
           </ul>
+        )}
+        {daysWithFlow.length > 10 && (
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            ועוד {daysWithFlow.length - 10} ימים עם תנועות — ראה תחזית מלאה למעלה
+          </p>
         )}
       </section>
     </AppShell>

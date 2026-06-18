@@ -209,39 +209,6 @@ function Dashboard() {
         </div>
       }
     >
-      {/* Financial Health Card */}
-      <section className="mb-5 rounded-3xl border border-border bg-surface p-5">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          בריאות פיננסית
-        </p>
-        <ul className="space-y-2.5">
-          {healthInsights.map((ins) => {
-            const Icon =
-              ins.tone === "success"
-                ? CheckCircle2
-                : ins.tone === "destructive"
-                  ? AlertCircle
-                  : ins.tone === "info"
-                    ? Info
-                    : AlertTriangle;
-            const color =
-              ins.tone === "success"
-                ? "text-success"
-                : ins.tone === "destructive"
-                  ? "text-destructive"
-                  : ins.tone === "info"
-                    ? "text-primary"
-                    : "text-warning";
-            return (
-              <li key={ins.key} className="flex items-center gap-2.5">
-                <Icon className={`h-4 w-4 shrink-0 ${color}`} />
-                <span className="text-sm font-medium leading-snug">{ins.text}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
       {/* Balance hero */}
       <section
         className="relative overflow-hidden rounded-3xl p-6 text-primary-foreground"
@@ -360,6 +327,39 @@ function Dashboard() {
             <p className="text-xs text-muted-foreground">חשבון או עלות</p>
           </div>
         </Link>
+      </section>
+
+      {/* Financial Health Card */}
+      <section className="mt-5 rounded-3xl border border-border bg-surface p-5">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          בריאות פיננסית
+        </p>
+        <ul className="space-y-2.5">
+          {healthInsights.map((ins) => {
+            const Icon =
+              ins.tone === "success"
+                ? CheckCircle2
+                : ins.tone === "destructive"
+                  ? AlertCircle
+                  : ins.tone === "info"
+                    ? Info
+                    : AlertTriangle;
+            const color =
+              ins.tone === "success"
+                ? "text-success"
+                : ins.tone === "destructive"
+                  ? "text-destructive"
+                  : ins.tone === "info"
+                    ? "text-primary"
+                    : "text-warning";
+            return (
+              <li key={ins.key} className="flex items-center gap-2.5">
+                <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+                <span className="text-sm font-medium leading-snug">{ins.text}</span>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       {/* Quick navigation — secondary (core workflows) */}
@@ -481,7 +481,7 @@ function Dashboard() {
               {fmt(overdueAmount)} דורשים טיפול
             </p>
           </div>
-          <span className="text-xs font-medium text-warning">לסקירה ←</span>
+          <ChevronLeft className="h-4 w-4 shrink-0 text-warning" />
         </Link>
       )}
 

@@ -446,7 +446,7 @@ function ViewMode({
         {tx.vatExempt ? (
           <DetailRow label="מע״מ" value="פטור" />
         ) : (
-          <DetailRow label='מע"מ (17%)' value={fmt(tx.vatAmount)} />
+          <DetailRow label="מע״מ (17%)" value={fmt(tx.vatAmount)} />
         )}
         <DetailRow label="סה״כ כולל מע״מ" value={fmt(tx.amount)} />
         {tx.category && <DetailRow label="קטגוריה" value={tx.category} />}
