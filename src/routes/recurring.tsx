@@ -8,6 +8,7 @@ import {
   fmtDate,
   financeStore,
   daysUntil,
+  getMonthlyEquivalent,
   FREQ_LABELS,
   type RecurringExpense,
   type RecurringFrequency,
@@ -26,12 +27,6 @@ function defaultNextDueDate() {
   const d = new Date();
   d.setDate(d.getDate() + 30);
   return d.toISOString().slice(0, 10);
-}
-
-function monthlyEquivalent(exp: RecurringExpense): number {
-  if (exp.frequency === "monthly") return exp.amount;
-  if (exp.frequency === "quarterly") return exp.amount / 3;
-  return exp.amount / 12;
 }
 
 type FormMode = "closed" | "add" | string;
@@ -57,7 +52,7 @@ function RecurringScreen() {
   );
 
   const monthlyTotal = useMemo(
-    () => activeExpenses.reduce((sum, e) => sum + monthlyEquivalent(e), 0),
+    () => activeExpenses.reduce((sum, e) => sum + getMonthlyEquivalent(e), 0),
     [activeExpenses],
   );
 
@@ -282,10 +277,16 @@ function RecurringScreen() {
       {recurringExpenses.length === 0 && formMode === "closed" && (
         <div className="rounded-2xl border border-border bg-surface p-8 text-center">
           <Repeat className="mx-auto h-8 w-8 text-muted-foreground/40" />
-          <p className="mt-3 text-sm font-medium text-muted-foreground">אין הוראות קבע</p>
+          <p className="mt-3 text-sm font-semibold">אין הוראות קבע</p>
           <p className="mt-1 text-xs text-muted-foreground/60">
-            הוסף הוצאות כמו שכירות, רואה חשבון, אינטרנט או ביטוח עסק.
+            הוסף התחייבויות קבועות כדי לשפר את תחזית התזרים
           </p>
+          <button
+            onClick={openAdd}
+            className="mt-4 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition active:scale-[0.98]"
+          >
+            הוסף הוראת קבע
+          </button>
         </div>
       )}
 

@@ -726,6 +726,13 @@ export const AUTHORITY_COLORS: Record<AuthorityType, string> = {
   other: "bg-muted text-muted-foreground",
 };
 
+/** Monthly cost equivalent for a recurring expense (normalises quarterly/yearly to per-month). */
+export function getMonthlyEquivalent(exp: RecurringExpense): number {
+  if (exp.frequency === "monthly") return exp.amount;
+  if (exp.frequency === "quarterly") return exp.amount / 3;
+  return exp.amount / 12;
+}
+
 /** Days from today to the given ISO date (negative = overdue). */
 export function daysUntil(dateISO: string): number {
   const [y, m, d] = dateISO.split("-").map(Number);
