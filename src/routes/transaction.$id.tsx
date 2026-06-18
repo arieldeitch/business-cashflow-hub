@@ -8,29 +8,24 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   CheckCircle2,
+  Paperclip,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import {
-  useFinance,
-  fmt,
-  fmtDate,
-  financeStore,
-  type Transaction,
-} from "@/lib/finance-store";
+import { useFinance, fmt, fmtDate, financeStore, type Transaction } from "@/lib/finance-store";
+import { useDocuments, DOC_TYPE_LABELS, type BusinessDocument } from "@/lib/documents-store";
 
 export const Route = createFileRoute("/transaction/$id")({
   head: () => ({ meta: [{ title: "פרטי עסקה — Cashflow OS" }] }),
   component: TransactionDetail,
 });
 
-const EXPENSE_CATEGORIES = [
-  "תוכנה", "ייעוץ", "שכירות", "תקשורת", "ביטוח", "שיווק", "ציוד", "אחר",
-];
+const EXPENSE_CATEGORIES = ["תוכנה", "ייעוץ", "שכירות", "תקשורת", "ביטוח", "שיווק", "ציוד", "אחר"];
 const VAT_RATE = 0.17;
 
 function TransactionDetail() {
   const { id } = Route.useParams();
   const { transactions } = useFinance();
+  const { documents } = useDocuments();
   const navigate = useNavigate();
 
   const tx = transactions.find((t) => t.id === id);
@@ -219,7 +214,14 @@ function TransactionDetail() {
         }
       >
         {mode === "view" ? (
-          <ViewMode tx={tx!} onDelete={() => setDeleteStep(1)} onDuplicate={handleDuplicate} />
+          <ViewMode
+            tx={tx!}
+            linkedDocs={documents.filter((d) =>
+              tx!.type === "expense" ? d.expenseId === tx!.id : d.incomeId === tx!.id,
+            )}
+            onDelete={() => setDeleteStep(1)}
+            onDuplicate={handleDuplicate}
+          />
         ) : (
           <form onSubmit={saveEdit} className="space-y-3">
             {/* Amount hero */}
@@ -389,10 +391,12 @@ function TransactionDetail() {
 
 function ViewMode({
   tx,
+  linkedDocs,
   onDelete,
   onDuplicate,
 }: {
   tx: Transaction;
+  linkedDocs: BusinessDocument[];
   onDelete: () => void;
   onDuplicate: () => void;
 }) {
@@ -417,11 +421,7 @@ function ViewMode({
             isIncome ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
           }`}
         >
-          {isIncome ? (
-            <ArrowDownLeft className="h-7 w-7" />
-          ) : (
-            <ArrowUpRight className="h-7 w-7" />
-          )}
+          {isIncome ? <ArrowDownLeft className="h-7 w-7" /> : <ArrowUpRight className="h-7 w-7" />}
         </span>
         <p
           className={`mt-4 font-display text-4xl font-bold tabular ${
@@ -451,12 +451,35 @@ function ViewMode({
         <DetailRow label="סה״כ כולל מע״מ" value={fmt(tx.amount)} />
         {tx.category && <DetailRow label="קטגוריה" value={tx.category} />}
         {tx.paidAt && (
-          <DetailRow label={tx.type === "income" ? "התקבל ב" : "שולם ב"} value={fmtDate(tx.paidAt)} />
+          <DetailRow
+            label={tx.type === "income" ? "התקבל ב" : "שולם ב"}
+            value={fmtDate(tx.paidAt)}
+          />
         )}
         {tx.updatedAt && (
           <DetailRow label="נערך לאחרונה" value={fmtDate(tx.updatedAt.slice(0, 10))} />
         )}
       </div>
+
+      {/* Linked documents */}
+      {linkedDocs.length > 0 && (
+        <div className="rounded-2xl border border-border bg-surface p-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            מסמכים מצורפים
+          </p>
+          <ul className="space-y-2">
+            {linkedDocs.map((doc) => (
+              <li key={doc.id} className="flex items-center gap-2 text-sm">
+                <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="font-medium">{DOC_TYPE_LABELS[doc.documentType]}</span>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {doc.fileName}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Actions */}
       {tx.status !== "paid" && (

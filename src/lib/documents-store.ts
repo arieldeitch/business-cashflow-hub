@@ -14,6 +14,8 @@ export interface BusinessDocument {
   documentDate: string | null;
   amount: number | null;
   supplierCustomerName: string | null;
+  expenseId: string | null;
+  incomeId: string | null;
   sentToAccountant: boolean;
   notes: string | null;
   createdAt: string;
@@ -36,7 +38,13 @@ function loadDocs(): DocsState {
     if (!raw) return { documents: [] };
     const parsed = JSON.parse(raw) as unknown;
     if (parsed && typeof parsed === "object" && Array.isArray((parsed as DocsState).documents)) {
-      return parsed as DocsState;
+      return {
+        documents: ((parsed as DocsState).documents as unknown[]).map((d) => ({
+          expenseId: null,
+          incomeId: null,
+          ...(d as object),
+        })) as BusinessDocument[],
+      };
     }
   } catch {
     // ignore
