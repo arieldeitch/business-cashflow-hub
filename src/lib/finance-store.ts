@@ -836,6 +836,7 @@ export interface ProjectionTotals {
 export function get30DayProjection(
   data: Pick<StoreData, "transactions" | "recurringExpenses" | "authorityObligations">,
   currentBalance: number,
+  extraExpensesByDate?: Map<string, number>,
 ): ProjectionTotals {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -860,6 +861,12 @@ export function get30DayProjection(
 
   for (const o of data.authorityObligations) {
     if (o.status === "pending" && o.dueDate <= d30ISO) expenses += o.amount;
+  }
+
+  if (extraExpensesByDate) {
+    for (const [date, amt] of extraExpensesByDate) {
+      if (date <= d30ISO) expenses += amt;
+    }
   }
 
   return {

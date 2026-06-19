@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useFinance, fmt, localISO, getRecurringInWindow } from "@/lib/finance-store";
+import { useLoans, getLoanPaymentsInWindow } from "@/lib/loan-store";
 import {
   TrendingUp,
   TrendingDown,
@@ -9,6 +10,7 @@ import {
   Building2,
   AlertCircle,
   CalendarDays,
+  CreditCard,
 } from "lucide-react";
 
 export const Route = createFileRoute("/forecast")({
@@ -24,12 +26,14 @@ function fmtShortDate(d: Date): string {
 
 function Forecast() {
   const { balance, transactions, recurringExpenses, authorityObligations } = useFinance();
+  const { loans } = useLoans();
 
   const { days, totalIn, totalOut, finalBalance, minBalance, maxBalance } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const recurringByDate = getRecurringInWindow(recurringExpenses, 30);
+    const loanByDate = getLoanPaymentsInWindow(loans, 30);
 
     // Build authority obligations map: date → total amount
     const authorityByDate = new Map<string, number>();
@@ -46,6 +50,7 @@ function Forecast() {
       out: number;
       recurring: number;
       authority: number;
+      loan: number;
       overdueIn: number;
     }[] = [];
     let running = balance;
@@ -77,7 +82,8 @@ function Forecast() {
 
       const recurringOut = recurringByDate.get(dateKey) ?? 0;
       const authorityOut = authorityByDate.get(dateKey) ?? 0;
-      outToday += recurringOut + authorityOut;
+      const loanOut = loanByDate.get(dateKey) ?? 0;
+      outToday += recurringOut + authorityOut + loanOut;
 
       running += inToday - outToday;
       totalIn += inToday;
@@ -89,6 +95,7 @@ function Forecast() {
         out: outToday,
         recurring: recurringOut,
         authority: authorityOut,
+        loan: loanOut,
         overdueIn,
       });
     }
@@ -102,7 +109,7 @@ function Forecast() {
       minBalance: Math.min(...balances, balance),
       maxBalance: Math.max(...balances, balance),
     };
-  }, [balance, transactions, recurringExpenses, authorityObligations]);
+  }, [balance, transactions, recurringExpenses, authorityObligations, loans]);
 
   const net = totalIn - totalOut;
 
@@ -206,6 +213,13 @@ function Forecast() {
               <Repeat className="h-3 w-3" />
               קבועות
             </Link>
+            <Link
+              to="/loans"
+              className="flex items-center gap-1 text-xs font-medium text-primary"
+            >
+              <CreditCard className="h-3 w-3" />
+              הלוואות
+            </Link>
           </div>
         </div>
         {daysWithFlow.length === 0 ? (
@@ -242,6 +256,12 @@ function Forecast() {
                       <span className="flex items-center gap-0.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-medium text-warning">
                         <Building2 className="h-2.5 w-2.5" />
                         רשות
+                      </span>
+                    )}
+                    {d.loan > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-medium text-primary">
+                        <CreditCard className="h-2.5 w-2.5" />
+                        הלוואה
                       </span>
                     )}
                   </div>

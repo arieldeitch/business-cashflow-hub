@@ -16,6 +16,7 @@ import {
   Repeat,
   FolderOpen,
   Info,
+  CreditCard,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -34,6 +35,13 @@ import {
   AUTHORITY_LABELS,
 } from "@/lib/finance-store";
 import { useDocuments } from "@/lib/documents-store";
+import {
+  useLoans,
+  getLoanPaymentsInWindow,
+  getTotalLoanBalance,
+  getTotalMonthlyLoanPayments,
+  getTotalRemainingPayments,
+} from "@/lib/loan-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,6 +57,11 @@ function Dashboard() {
   const { balance, startingBalance, transactions, recurringExpenses, authorityObligations } =
     useFinance();
   const { documents } = useDocuments();
+  const { loans } = useLoans();
+  const loanPaymentsMap = useMemo(() => getLoanPaymentsInWindow(loans, 30), [loans]);
+  const totalLoanBalance = useMemo(() => getTotalLoanBalance(loans), [loans]);
+  const totalMonthlyLoanPayments = useMemo(() => getTotalMonthlyLoanPayments(loans), [loans]);
+  const totalLoanRemainingPayments = useMemo(() => getTotalRemainingPayments(loans), [loans]);
   const [hidden, setHidden] = useState(false);
   const [editingBalance, setEditingBalance] = useState(false);
   const [balanceDraft, setBalanceDraft] = useState("");
@@ -67,10 +80,15 @@ function Dashboard() {
     return { overdueCount: oCount, overdueAmount: oAmt };
   }, [transactions]);
 
-  // 30-day projection — shared logic with Forecast screen
+  // 30-day projection — shared logic with Forecast screen, includes loan payments
   const { expectedIncome, expectedExpenses, projected } = useMemo(
-    () => get30DayProjection({ transactions, recurringExpenses, authorityObligations }, balance),
-    [balance, transactions, recurringExpenses, authorityObligations],
+    () =>
+      get30DayProjection(
+        { transactions, recurringExpenses, authorityObligations },
+        balance,
+        loanPaymentsMap,
+      ),
+    [balance, transactions, recurringExpenses, authorityObligations, loanPaymentsMap],
   );
 
   const net = expectedIncome - expectedExpenses;
@@ -161,8 +179,30 @@ function Dashboard() {
       });
     }
 
+    // 8. High fixed obligations vs expected income
+    const totalPendingAuthority = authorityObligations
+      .filter((o) => o.status === "pending")
+      .reduce((s, o) => s + o.amount, 0);
+    const totalMonthlyFixed = monthlyRecurringTotal + totalMonthlyLoanPayments;
+    if (expectedIncome > 0 && totalMonthlyFixed + totalPendingAuthority > expectedIncome) {
+      items.push({
+        key: "fixed-obligations-risk",
+        tone: "warning",
+        text: "התחייבויות קבועות גבוהות ביחס לתזרים הצפוי",
+      });
+    }
+
     return items;
-  }, [projected, collectionsSummary, upcomingObligations, monthlyRecurringTotal, docsNotSentCount]);
+  }, [
+    projected,
+    collectionsSummary,
+    upcomingObligations,
+    monthlyRecurringTotal,
+    docsNotSentCount,
+    totalMonthlyLoanPayments,
+    expectedIncome,
+    authorityObligations,
+  ]);
 
   const upcomingTxs = useMemo(
     () =>
@@ -424,6 +464,18 @@ function Dashboard() {
             <p className="text-xs text-muted-foreground">מעקב שירות</p>
           </div>
         </Link>
+        <Link
+          to="/loans"
+          className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-3 transition active:scale-[0.98]"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <CreditCard className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">הלוואות</p>
+            <p className="text-xs text-muted-foreground">מעקב הלוואות</p>
+          </div>
+        </Link>
       </section>
 
       {/* Forecast breakdown card */}
@@ -661,6 +713,57 @@ function Dashboard() {
                 );
               })}
             </ul>
+          )}
+        </Link>
+      </section>
+
+      {/* Loans card */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">💳 הלוואות</h2>
+          <Link to="/loans" className="text-xs font-medium text-primary">
+            לניהול הלוואות
+          </Link>
+        </div>
+        <Link
+          to="/loans"
+          className="mt-3 block rounded-3xl border border-border bg-surface p-5 transition active:scale-[0.98]"
+        >
+          {loans.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-2 text-center">
+              <CreditCard className="h-6 w-6 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">אין הלוואות פעילות</p>
+              <p className="text-xs text-muted-foreground/60">
+                הוסף הלוואה כדי לכלול אותה בתחזית התזרים
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  יתרת הלוואות
+                </p>
+                <p className="mt-1 font-display text-lg font-bold tabular">
+                  {hidden ? "••••" : fmt(totalLoanBalance)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  תשלום חודשי
+                </p>
+                <p className="mt-1 font-display text-lg font-bold tabular text-destructive">
+                  {hidden ? "••••" : fmt(totalMonthlyLoanPayments)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  תשלומים שנותרו
+                </p>
+                <p className="mt-1 font-display text-lg font-bold tabular">
+                  {totalLoanRemainingPayments}
+                </p>
+              </div>
+            </div>
           )}
         </Link>
       </section>
